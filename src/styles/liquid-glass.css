@@ -1,0 +1,96 @@
+:root {
+  --phantom-bg: #0a0a0a;
+  --phantom-surface: #111111;
+  --phantom-border: #222222;
+  --phantom-text: #f0f0f0;
+  --phantom-text-muted: #888888;
+  --phantom-accent: #c8f135;
+
+  --glass-blur-sm: 40px;
+  --glass-blur-md: 56px;
+  --glass-blur-lg: 80px;
+
+  --glass-tint-low: rgba(255, 255, 255, 0.06);
+  --glass-tint-mid: rgba(255, 255, 255, 0.12);
+  --glass-tint-high: rgba(255, 255, 255, 0.18);
+
+  --glass-border-soft: rgba(255, 255, 255, 0.18);
+  --glass-border-strong: rgba(255, 255, 255, 0.34);
+
+  --glass-highlight: rgba(255, 255, 255, 0.55);
+  --glass-shadow-inset: rgba(255, 255, 255, 0.08);
+
+  --glass-aberration-red: rgba(255, 65, 92, 0.18);
+  --glass-aberration-blue: rgba(35, 140, 255, 0.2);
+
+  --glass-spring-stiffness: 120;
+  --glass-spring-damping: 20;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--phantom-bg);
+  color: var(--phantom-text);
+}
+
+.glass-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 0.5px solid var(--glass-border-soft);
+  background:
+    linear-gradient(145deg, var(--glass-tint-high), var(--glass-tint-low) 40%, rgba(0, 0, 0, 0.26) 95%),
+    radial-gradient(circle at 18% 4%, rgba(255, 255, 255, 0.22), transparent 46%);
+  backdrop-filter: blur(var(--glass-blur-md)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(160%);
+  box-shadow: inset 0 1px 0 var(--glass-shadow-inset);
+}
+
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 1px solid transparent;
+  background: linear-gradient(
+      140deg,
+      var(--glass-highlight),
+      rgba(255, 255, 255, 0.16) 22%,
+      transparent 48%
+    )
+    border-box;
+  mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.glass-panel::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.45;
+  background:
+    radial-gradient(circle at 10% 4%, var(--glass-highlight), transparent 30%),
+    radial-gradient(circle at 102% 100%, var(--glass-aberration-blue), transparent 45%),
+    radial-gradient(circle at -8% 102%, var(--glass-aberration-red), transparent 40%);
+}
+
+.glass-panel-strong {
+  border: 1px solid var(--glass-border-strong);
+  backdrop-filter: blur(var(--glass-blur-lg)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(180%);
+}
+
+.glass-noise {
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 0);
+  background-size: 3px 3px;
+  opacity: 0.04;
+}
