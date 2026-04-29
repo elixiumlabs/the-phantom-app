@@ -1,6 +1,5 @@
 import { memo, useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const NAV_LINKS = [
@@ -12,7 +11,8 @@ const NAV_LINKS = [
 
 const NavigationDock = memo(() => {
   const [scrolled, setScrolled] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const location = useLocation()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -21,144 +21,130 @@ const NavigationDock = memo(() => {
   }, [])
 
   useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    document.body.style.overflow = menuOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
-  }, [mobileOpen])
+  }, [menuOpen])
+
+  const isActive = (href: string) => {
+    if (href.startsWith('/')) return location.pathname === href
+    return false
+  }
 
   return (
-    <>
-      <nav
-        className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-6 transition-all duration-300"
-        style={{
-          background: scrolled ? 'rgba(10,10,10,0.9)' : 'transparent',
-          backdropFilter: scrolled ? 'blur(16px)' : 'none',
-          borderBottom: scrolled ? '1px solid #1a1a1a' : 'none',
-        }}
-      >
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 no-underline z-10">
-          <div className="w-4 h-4 bg-phantom-lime flex-shrink-0" />
-          <span className="font-display font-bold text-[18px] text-phantom-text-primary">PHANTOM</span>
-        </Link>
+    <nav
+      className="fixed top-0 left-0 right-0 z-50 px-6 md:px-12 lg:px-24 xl:px-40 py-4 flex items-center justify-between transition-all duration-300"
+      style={{
+        background: scrolled || menuOpen ? 'rgba(10,10,10,0.85)' : 'transparent',
+        backdropFilter: scrolled || menuOpen ? 'blur(16px)' : 'none',
+        borderBottom: scrolled ? '1px solid #1a1a1a' : '1px solid transparent',
+      }}
+    >
+      {/* Logo */}
+      <Link to="/" className="flex items-center gap-2 no-underline z-10">
+        <div className="w-4 h-4 bg-phantom-lime flex-shrink-0" />
+        <span className="font-display font-bold text-[18px] tracking-tight text-phantom-text-primary">
+          PHANTOM&copy;
+        </span>
+      </Link>
 
-        {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map(({ label, href }) =>
-            href.startsWith('/') ? (
-              <Link
-                key={label}
-                to={href}
-                className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary px-4 py-2 transition-colors duration-150 no-underline"
-              >
-                {label}
-              </Link>
-            ) : (
-              <a
-                key={label}
-                href={href}
-                className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary px-4 py-2 transition-colors duration-150 no-underline"
-              >
-                {label}
-              </a>
-            )
-          )}
-        </div>
+      {/* Desktop pill nav */}
+      <div className="hidden md:flex items-center bg-phantom-surface/60 border border-phantom-border-subtle rounded-full px-1 py-1 gap-1 backdrop-blur-md">
+        {NAV_LINKS.map(({ label, href }) => {
+          const active = isActive(href)
+          const className = `font-body px-4 py-1.5 rounded-full text-sm transition-all no-underline ${
+            active
+              ? 'bg-phantom-surface border border-phantom-border text-phantom-text-primary font-medium'
+              : 'text-phantom-text-secondary hover:text-phantom-text-primary'
+          }`
+          return href.startsWith('/') ? (
+            <Link key={label} to={href} className={className}>{label}</Link>
+          ) : (
+            <a key={label} href={href} className={className}>{label}</a>
+          )
+        })}
+      </div>
 
-        {/* Auth buttons */}
-        <div className="hidden sm:flex items-center gap-3 z-10">
-          <Link to="/login" className="btn-ghost">Log in</Link>
-          <Link to="/signup" className="btn-primary">Start free</Link>
-        </div>
-
-        {/* Mobile hamburger */}
-        <button
-          className="sm:hidden text-phantom-text-secondary hover:text-phantom-text-primary transition-colors z-10"
-          onClick={() => setMobileOpen(v => !v)}
-          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+      {/* Desktop CTA */}
+      <div className="hidden md:flex items-center gap-3 z-10">
+        <Link
+          to="/login"
+          className="font-body text-sm text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline px-3"
         >
-          {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-      </nav>
+          Log in
+        </Link>
+        <Link
+          to="/signup"
+          className="flex items-center gap-2.5 bg-gradient-to-r from-phantom-lime to-[#5fc91f] text-phantom-black hover:opacity-90 text-sm font-semibold pl-5 pr-2 py-2 rounded-full transition-opacity no-underline"
+        >
+          Start free
+          <span className="size-7 rounded-full bg-phantom-black flex items-center justify-center">
+            <svg width="12" height="10" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M.6 4.602h10m-4-4 4 4-4 4" stroke="#89F336" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        </Link>
+      </div>
+
+      {/* Mobile hamburger */}
+      <button
+        onClick={() => setMenuOpen(v => !v)}
+        className="md:hidden flex flex-col gap-1.5 cursor-pointer bg-transparent border-0 p-1 z-10"
+        aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+      >
+        <span className={`block w-6 h-0.5 bg-phantom-text-primary transition-transform duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
+        <span className={`block w-6 h-0.5 bg-phantom-text-primary transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
+        <span className={`block w-6 h-0.5 bg-phantom-text-primary transition-transform duration-200 ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+      </button>
 
       {/* Mobile drawer */}
       <AnimatePresence>
-        {mobileOpen && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-40 bg-black/60"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setMobileOpen(false)}
-            />
-            <motion.div
-              className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-[#0d0d0d] border-l border-phantom-border-subtle flex flex-col"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            >
-              <div className="flex items-center justify-between px-6 h-16 border-b border-phantom-border-subtle">
-                <span className="font-display font-bold text-[16px] text-phantom-text-primary">PHANTOM</span>
-                <button
-                  onClick={() => setMobileOpen(false)}
-                  className="text-phantom-text-secondary hover:text-phantom-text-primary transition-colors"
-                  aria-label="Close menu"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <nav className="flex-1 px-4 py-6 space-y-1">
-                {NAV_LINKS.map(({ label, href }) =>
-                  href.startsWith('/') ? (
-                    <Link
-                      key={label}
-                      to={href}
-                      onClick={() => setMobileOpen(false)}
-                      className="block font-body text-[15px] text-phantom-text-secondary hover:text-phantom-text-primary px-4 py-3 rounded transition-colors no-underline"
-                    >
-                      {label}
-                    </Link>
-                  ) : (
-                    <a
-                      key={label}
-                      href={href}
-                      onClick={() => setMobileOpen(false)}
-                      className="block font-body text-[15px] text-phantom-text-secondary hover:text-phantom-text-primary px-4 py-3 rounded transition-colors no-underline"
-                    >
-                      {label}
-                    </a>
-                  )
-                )}
-              </nav>
-
-              <div className="px-4 pb-8 space-y-3 border-t border-phantom-border-subtle pt-6">
-                <Link
-                  to="/login"
-                  className="btn-secondary w-full"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Log in
-                </Link>
-                <Link
-                  to="/signup"
-                  className="btn-primary w-full"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Start free
-                </Link>
-              </div>
-            </motion.div>
-          </>
+        {menuOpen && (
+          <motion.div
+            key="mobile-menu"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="absolute top-full left-0 w-full bg-phantom-black/95 backdrop-blur-xl border-t border-phantom-border-subtle flex flex-col p-5 gap-1 md:hidden z-50"
+          >
+            {NAV_LINKS.map(({ label, href }) => {
+              const active = isActive(href)
+              const className = `font-body px-4 py-3 rounded-lg text-[15px] no-underline transition-colors ${
+                active
+                  ? 'bg-phantom-surface font-medium text-phantom-text-primary'
+                  : 'text-phantom-text-secondary hover:bg-phantom-surface hover:text-phantom-text-primary'
+              }`
+              return href.startsWith('/') ? (
+                <Link key={label} to={href} className={className} onClick={() => setMenuOpen(false)}>{label}</Link>
+              ) : (
+                <a key={label} href={href} className={className} onClick={() => setMenuOpen(false)}>{label}</a>
+              )
+            })}
+            <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-phantom-border-subtle">
+              <Link
+                to="/login"
+                onClick={() => setMenuOpen(false)}
+                className="font-body text-sm text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline px-4 py-2"
+              >
+                Log in
+              </Link>
+              <Link
+                to="/signup"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center justify-center gap-2.5 bg-gradient-to-r from-phantom-lime to-[#5fc91f] text-phantom-black text-sm font-semibold px-5 py-2.5 rounded-full no-underline w-fit"
+              >
+                Start free
+                <span className="size-7 rounded-full bg-phantom-black flex items-center justify-center">
+                  <svg width="12" height="10" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M.6 4.602h10m-4-4 4 4-4 4" stroke="#89F336" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </Link>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </nav>
   )
 })
 

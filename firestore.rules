@@ -1,0 +1,60 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // users/{uid} — server-managed; client may read its own doc only.
+    // Plan, stripe_*, onboarding flags must NEVER be settable from the client.
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+
+      // Daily AI usage counters — server-only.
+      match /ai_usage/{day} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
+    }
+
+    // Projects + nested phase data — owner-only, by user_id field.
+    match /projects/{projectId} {
+      allow read, update, delete: if isSignedIn()
+        && resource.data.user_id == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid;
+
+      // Subcollections inherit owner check via parent doc lookup.
+      match /{subcollection}/{docId} {
+        allow read, write: if isSignedIn()
+          && get(/databases/$(database)/documents/projects/$(projectId)).data.user_id == request.auth.uid;
+      }
+    }
+
+    // Proof vault — owner-only.
+    match /proof_vault/{itemId} {
+      allow read, update, delete: if isSignedIn()
+        && resource.data.user_id == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid;
+    }
+
+    // Activity log — server-written, user reads their own.
+    match /activity_log/{entryId} {
+      allow read: if isSignedIn()
+        && resource.data.user_id == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
