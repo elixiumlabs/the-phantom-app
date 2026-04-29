@@ -9,9 +9,13 @@ service cloud.firestore {
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
+    function ownsProject(projectId) {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/projects/$(projectId)).data.user_id == request.auth.uid;
+    }
 
-    // users/{uid} — server-managed; client may read its own doc only.
-    // Plan, stripe_*, onboarding flags must NEVER be settable from the client.
+    // users/{uid} — server-managed.
+    // Plan, stripe_*, onboarding flags, subscription_status are server-only.
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow write: if false;
@@ -21,34 +25,64 @@ service cloud.firestore {
         allow read: if isOwner(uid);
         allow write: if false;
       }
-    }
 
-    // Projects + nested phase data — owner-only, by user_id field.
-    match /projects/{projectId} {
-      allow read, update, delete: if isSignedIn()
-        && resource.data.user_id == request.auth.uid;
-      allow create: if isSignedIn()
-        && request.resource.data.user_id == request.auth.uid;
-
-      // Subcollections inherit owner check via parent doc lookup.
-      match /{subcollection}/{docId} {
-        allow read, write: if isSignedIn()
-          && get(/databases/$(database)/documents/projects/$(projectId)).data.user_id == request.auth.uid;
+      // Rate-limit window — server-only.
+      match /rate_limits/{key} {
+        allow read, write: if false;
       }
     }
 
-    // Proof vault — owner-only.
-    match /proof_vault/{itemId} {
-      allow read, update, delete: if isSignedIn()
-        && resource.data.user_id == request.auth.uid;
+    // Projects + nested phase data — owner-only, by user_id field.
+    // Phase completion + ready_to_surface are server-only flips (callables).
+    match /projects/{projectId} {
+      allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
       allow create: if isSignedIn()
-        && request.resource.data.user_id == request.auth.uid;
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.current_phase == 1
+        && request.resource.data.phase_1_completed == false
+        && request.resource.data.phase_2_completed == false
+        && request.resource.data.phase_3_completed == false
+        && request.resource.data.phase_4_completed == false
+        && request.resource.data.ready_to_surface == false;
+      allow update: if isSignedIn()
+        && resource.data.user_id == request.auth.uid
+        // Phase flags + ready_to_surface + status transition to 'surfaced' are server-only.
+        && request.resource.data.phase_1_completed == resource.data.phase_1_completed
+        && request.resource.data.phase_2_completed == resource.data.phase_2_completed
+        && request.resource.data.phase_3_completed == resource.data.phase_3_completed
+        && request.resource.data.phase_4_completed == resource.data.phase_4_completed
+        && request.resource.data.ready_to_surface == resource.data.ready_to_surface
+        && request.resource.data.user_id == resource.data.user_id;
+      allow delete: if isSignedIn() && resource.data.user_id == request.auth.uid;
+
+      // Generic phase subcollections (ghost_identity, silent_test, iteration_loop, lock_in, outreach_log, iteration_versions).
+      match /{subcollection}/{docId} {
+        allow read: if ownsProject(projectId);
+        allow create, update, delete: if ownsProject(projectId);
+      }
+
+      // Insights — server-only.
+      match /insights/{docId} {
+        allow read: if ownsProject(projectId);
+        allow write: if false;
+      }
+    }
+
+    // Proof vault — owner-only. file_url + storage_path written server-side via onFinalize.
+    match /proof_vault/{itemId} {
+      allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
+      allow update: if isSignedIn()
+        && resource.data.user_id == request.auth.uid
+        && request.resource.data.user_id == resource.data.user_id
+        && request.resource.data.storage_path == resource.data.storage_path
+        && request.resource.data.file_url == resource.data.file_url;
+      allow delete: if isSignedIn() && resource.data.user_id == request.auth.uid;
     }
 
     // Activity log — server-written, user reads their own.
     match /activity_log/{entryId} {
-      allow read: if isSignedIn()
-        && resource.data.user_id == request.auth.uid;
+      allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
       allow write: if false;
     }
 
