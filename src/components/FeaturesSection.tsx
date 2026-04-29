@@ -1,5 +1,5 @@
 import { memo, useRef } from 'react'
-import { Target, Users, BarChart2, FileText, Shield, CheckSquare, MessageSquare, RefreshCw, Zap, TrendingUp } from 'lucide-react'
+import { Target, Users, BarChart2, FileText, Shield, CheckSquare, MessageSquare, RefreshCw, Zap, TrendingUp, Download, EyeOff } from 'lucide-react'
 import { motion, useInView } from 'framer-motion'
 
 const FEATURES = [
@@ -13,6 +13,8 @@ const FEATURES = [
   { icon: RefreshCw, title: 'Iteration Log', body: 'Document every version of every offer with one variable tracked per cycle. Know exactly what you changed and what changed because of it.' },
   { icon: Zap, title: 'AI-Assisted Validation', body: 'Structured AI prompts built into each phase. Not generic ChatGPT. Purpose-built validation workflows that surface what you cannot see from inside your own idea.' },
   { icon: TrendingUp, title: 'Launch Readiness Score', body: 'A live score built from every phase condition: signals, conversions, proof, and messaging lock. You know exactly where you stand before you go public.' },
+  { icon: Download, title: 'Brand Lock-In Export', body: 'When the phantom phase is complete, export a full brand kit — positioning, proof package, iteration history, and identity decisions — as a structured document ready to deploy.' },
+  { icon: EyeOff, title: 'Zero Public Footprint', body: 'Nothing you build inside PHANTOM is visible externally. No public profile. No follower count. No performance. You are invisible until the proof says otherwise.' },
 ]
 
 const FeaturesSection = memo(() => {

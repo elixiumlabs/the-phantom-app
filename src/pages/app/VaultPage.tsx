@@ -19,11 +19,6 @@ const TYPE_BADGE: Record<ProofType, string> = {
   screenshot:  'badge',
 }
 
-type AddForm =
-  | { type: 'result';      brandId: string; metric: string; context: string; date: string }
-  | { type: 'testimonial'; brandId: string; quote: string; attribution: string; dateCollected: string }
-  | { type: 'case_study';  brandId: string; beforeState: string; whatWasDone: string; afterState: string; timeline: string }
-  | { type: 'screenshot';  brandId: string; title: string; notes: string }
 
 const VaultPage = memo(() => {
   const { user } = useAuth()

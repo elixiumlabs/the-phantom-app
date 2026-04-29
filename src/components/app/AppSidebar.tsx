@@ -1,29 +1,52 @@
 import { memo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Layers, Shield, Activity, FileText, Settings, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
-const NAV_ITEMS = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+const NAV_MAIN = [
+  { label: 'Dashboard',  href: '/dashboard', icon: LayoutDashboard },
+  { label: 'My Brands',  href: '/dashboard', icon: Layers },
+]
+
+const NAV_TOOLS = [
+  { label: 'Proof Vault',     href: '/vault',      icon: Shield   },
+  { label: 'Signal Tracker',  href: '/signals',    icon: Activity },
+  { label: 'Templates',       href: '/templates',  icon: FileText },
+]
+
+const NAV_ACCOUNT = [
   { label: 'Settings', href: '/settings', icon: Settings },
 ]
 
 const AppSidebar = memo(() => {
   const { user, logout } = useAuth()
-  const location = useLocation()
+  const { pathname } = useLocation()
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') return location.pathname === '/dashboard' || location.pathname.startsWith('/brand/')
-    return location.pathname.startsWith(href)
+    if (href === '/dashboard') return pathname === '/dashboard' || pathname.startsWith('/brand/')
+    return pathname === href
   }
+
+  const NavLink = ({ label, href, icon: Icon }: { label: string; href: string; icon: React.ElementType }) => (
+    <Link
+      to={href}
+      className={`nav-item ${isActive(href) ? 'nav-item-active' : ''}`}
+    >
+      <Icon size={15} />
+      <span>{label}</span>
+    </Link>
+  )
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-60 bg-[#0d0d0d] border-r border-phantom-border-subtle flex flex-col z-40">
+
       {/* Logo */}
       <div className="p-6 border-b border-phantom-border-subtle">
         <Link to="/dashboard" className="flex items-center gap-2 no-underline mb-5">
           <div className="w-4 h-4 bg-phantom-lime flex-shrink-0" />
-          <span className="font-display font-bold text-[16px] text-phantom-text-primary">PHANTOM</span>
+          <span className="font-display font-bold text-[16px] text-phantom-text-primary tracking-widest">
+            PHANTOM
+          </span>
         </Link>
 
         {/* User */}
@@ -35,7 +58,7 @@ const AppSidebar = memo(() => {
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-body text-[13px] text-phantom-text-primary truncate">{user?.name}</p>
-            <span className={`badge text-[9px] ${user?.plan === 'pro' ? 'badge-active' : ''}`}>
+            <span className={`badge text-[9px] mt-0.5 ${user?.plan === 'pro' ? 'badge-active' : ''}`}>
               {user?.plan ?? 'free'}
             </span>
           </div>
@@ -43,29 +66,36 @@ const AppSidebar = memo(() => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
-          const active = isActive(href)
-          return (
-            <Link
-              key={label}
-              to={href}
-              className={`nav-item ${active ? 'nav-item-active' : ''}`}
-            >
-              <Icon size={16} />
-              <span>{label}</span>
-            </Link>
-          )
-        })}
+      <nav className="flex-1 p-3 overflow-y-auto space-y-4">
+
+        {/* Main */}
+        <div className="space-y-0.5">
+          {NAV_MAIN.map(item => <NavLink key={item.label} {...item} />)}
+        </div>
+
+        {/* Tools */}
+        <div>
+          <p className="font-ui text-[10px] text-phantom-text-muted uppercase tracking-wider px-4 mb-1.5">
+            Quick links
+          </p>
+          <div className="space-y-0.5">
+            {NAV_TOOLS.map(item => <NavLink key={item.label} {...item} />)}
+          </div>
+        </div>
+
+        {/* Account */}
+        <div className="space-y-0.5">
+          {NAV_ACCOUNT.map(item => <NavLink key={item.label} {...item} />)}
+        </div>
 
       </nav>
 
       {/* Upgrade CTA */}
       {user?.plan === 'free' && (
         <div className="p-3 border-t border-phantom-border-subtle">
-          <div className="rounded p-3" style={{ background: '#0a1900', border: '1px solid rgba(137,243,54,0.2)' }}>
+          <div className="rounded-xl p-3" style={{ background: '#0a1900', border: '1px solid rgba(137,243,54,0.2)' }}>
             <p className="font-body text-[12px] text-phantom-text-primary mb-2">
-              Unlock all 4 phases
+              Unlock all features
             </p>
             <button className="btn-primary w-full text-[12px] py-2">
               Upgrade to Pro
@@ -78,12 +108,13 @@ const AppSidebar = memo(() => {
       <div className="p-3 border-t border-phantom-border-subtle">
         <button
           onClick={logout}
-          className="nav-item w-full justify-start text-phantom-text-muted hover:text-phantom-danger gap-3"
+          className="nav-item w-full justify-start text-phantom-text-muted hover:text-phantom-danger"
         >
-          <LogOut size={16} />
+          <LogOut size={15} />
           <span>Log out</span>
         </button>
       </div>
+
     </aside>
   )
 })

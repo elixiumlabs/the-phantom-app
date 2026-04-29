@@ -26,6 +26,10 @@ import PhaseTest from '@/pages/app/PhaseTest'
 import PhaseIterate from '@/pages/app/PhaseIterate'
 import PhaseLock from '@/pages/app/PhaseLock'
 import SettingsPage from '@/pages/app/SettingsPage'
+import VaultPage from '@/pages/app/VaultPage'
+import SignalTrackerPage from '@/pages/app/SignalTrackerPage'
+import TemplatesPage from '@/pages/app/TemplatesPage'
+import BlogPage from '@/pages/BlogPage'
 
 const LandingPage = memo(() => (
   <div className="relative min-h-screen">
@@ -91,9 +95,23 @@ const AppRoutes = memo(() => (
       <Route path="lock" element={<PhaseLock />} />
     </Route>
 
+    <Route path="/vault" element={
+      <RequireAuth><VaultPage /></RequireAuth>
+    } />
+
+    <Route path="/signals" element={
+      <RequireAuth><SignalTrackerPage /></RequireAuth>
+    } />
+
+    <Route path="/templates" element={
+      <RequireAuth><TemplatesPage /></RequireAuth>
+    } />
+
     <Route path="/settings" element={
       <RequireAuth><SettingsPage /></RequireAuth>
     } />
+
+    <Route path="/blog" element={<BlogPage />} />
 
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>

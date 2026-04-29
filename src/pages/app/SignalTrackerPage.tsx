@@ -27,7 +27,7 @@ const PHASE_LABELS: Record<string, string> = {
   complete: 'Complete',
 }
 
-const DEFAULT_FORM = { type: 'reply' as SignalType, source: '', notes: '', brandId: '', phase: 'test' as const }
+const DEFAULT_FORM = { type: 'reply' as SignalType, source: '', notes: '', brandId: '', phase: 'test' as Signal['phase'] }
 
 const SignalTrackerPage = memo(() => {
   const { user } = useAuth()

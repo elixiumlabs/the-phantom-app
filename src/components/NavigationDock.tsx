@@ -7,7 +7,7 @@ const NAV_LINKS = [
   { label: 'Features', href: '#features' },
   { label: 'How It Works', href: '#how-it-works' },
   { label: 'Pricing', href: '#pricing' },
-  { label: 'Changelog', href: '#changelog' },
+  { label: 'Blog', href: '/blog' },
 ]
 
 const NavigationDock = memo(() => {
@@ -47,15 +47,25 @@ const NavigationDock = memo(() => {
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map(({ label, href }) => (
-            <a
-              key={label}
-              href={href}
-              className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary px-4 py-2 transition-colors duration-150 no-underline"
-            >
-              {label}
-            </a>
-          ))}
+          {NAV_LINKS.map(({ label, href }) =>
+            href.startsWith('/') ? (
+              <Link
+                key={label}
+                to={href}
+                className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary px-4 py-2 transition-colors duration-150 no-underline"
+              >
+                {label}
+              </Link>
+            ) : (
+              <a
+                key={label}
+                href={href}
+                className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary px-4 py-2 transition-colors duration-150 no-underline"
+              >
+                {label}
+              </a>
+            )
+          )}
         </div>
 
         {/* Auth buttons */}
@@ -105,16 +115,27 @@ const NavigationDock = memo(() => {
               </div>
 
               <nav className="flex-1 px-4 py-6 space-y-1">
-                {NAV_LINKS.map(({ label, href }) => (
-                  <a
-                    key={label}
-                    href={href}
-                    onClick={() => setMobileOpen(false)}
-                    className="block font-body text-[15px] text-phantom-text-secondary hover:text-phantom-text-primary px-4 py-3 rounded transition-colors no-underline"
-                  >
-                    {label}
-                  </a>
-                ))}
+                {NAV_LINKS.map(({ label, href }) =>
+                  href.startsWith('/') ? (
+                    <Link
+                      key={label}
+                      to={href}
+                      onClick={() => setMobileOpen(false)}
+                      className="block font-body text-[15px] text-phantom-text-secondary hover:text-phantom-text-primary px-4 py-3 rounded transition-colors no-underline"
+                    >
+                      {label}
+                    </Link>
+                  ) : (
+                    <a
+                      key={label}
+                      href={href}
+                      onClick={() => setMobileOpen(false)}
+                      className="block font-body text-[15px] text-phantom-text-secondary hover:text-phantom-text-primary px-4 py-3 rounded transition-colors no-underline"
+                    >
+                      {label}
+                    </a>
+                  )
+                )}
               </nav>
 
               <div className="px-4 pb-8 space-y-3 border-t border-phantom-border-subtle pt-6">

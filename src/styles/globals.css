@@ -119,9 +119,9 @@
   .liquid-glass-neon {
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
-    background: rgba(0, 255, 136, 0.06);
-    border: 1px solid rgba(0, 255, 136, 0.45);
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.12), inset 0 0 20px rgba(0, 255, 136, 0.04);
+    background: rgba(137, 243, 54, 0.06);
+    border: 1px solid rgba(137, 243, 54, 0.45);
+    box-shadow: 0 0 20px rgba(137, 243, 54, 0.12), inset 0 0 20px rgba(137, 243, 54, 0.04);
   }
 
   /* NOISE GRAIN */
@@ -218,4 +218,14 @@
 
 .animate-pulse-dot {
   animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes ribbon-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes ribbon-scroll-reverse {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
 }

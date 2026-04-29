@@ -10,6 +10,20 @@ const config: Config = {
         ui: ['Space Grotesk', 'sans-serif'],
         code: ['JetBrains Mono', 'monospace'],
       },
+      keyframes: {
+        'marquee-left': {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(calc(-100% - var(--gap)))' },
+        },
+        'marquee-right': {
+          from: { transform: 'translateX(calc(-100% - var(--gap)))' },
+          to: { transform: 'translateX(0)' },
+        },
+      },
+      animation: {
+        'marquee-left': 'marquee-left var(--duration, 30s) linear infinite',
+        'marquee-right': 'marquee-right var(--duration, 30s) linear infinite',
+      },
       colors: {
         phantom: {
           black: '#0a0a0a',
