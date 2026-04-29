@@ -9,7 +9,7 @@ const FooterSection = memo(() => (
         <div>
           <div className="flex items-center gap-2 mb-3">
             <div className="w-4 h-4 bg-phantom-lime" />
-            <span className="font-display font-bold text-[16px] text-phantom-text-primary">PHANTOM&copy;</span>
+            <span className="font-display font-bold text-[16px] text-phantom-text-primary">PHANTOM</span>
           </div>
           <p className="font-body text-[13px] text-phantom-text-muted mb-6">
             Build invisible. Launch inevitable.

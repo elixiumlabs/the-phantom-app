@@ -43,7 +43,7 @@ const NavigationDock = memo(() => {
       <Link to="/" className="flex items-center gap-2 no-underline z-10">
         <div className="w-4 h-4 bg-phantom-lime flex-shrink-0" />
         <span className="font-display font-bold text-[18px] tracking-tight text-phantom-text-primary">
-          PHANTOM&copy;
+          PHANTOM
         </span>
       </Link>
 

@@ -51,9 +51,19 @@ function authErrorMessage(code: string): string {
     case 'auth/wrong-password':
     case 'auth/invalid-credential': return 'Email or password is incorrect.'
     case 'auth/too-many-requests': return 'Too many attempts. Try again in a few minutes.'
-    case 'auth/popup-closed-by-user': return 'Sign-in cancelled.'
+
+    // Google / popup specific
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request': return 'Sign-in cancelled.'
+    case 'auth/popup-blocked': return 'Your browser blocked the Google popup. Allow popups for this site and try again.'
+    case 'auth/unauthorized-domain': return 'This domain is not authorized for Google sign-in. Add it in Firebase Console → Authentication → Settings → Authorized domains.'
+    case 'auth/operation-not-allowed': return 'Google sign-in is not enabled. Turn it on in Firebase Console → Authentication → Sign-in method → Google.'
+    case 'auth/account-exists-with-different-credential': return 'An account with this email already exists using a different sign-in method.'
+    case 'auth/internal-error': return 'Firebase internal error. Check the browser console for details.'
+
     case 'auth/network-request-failed': return 'Network error. Check your connection.'
-    default: return 'Something went wrong. Try again.'
+    case 'auth/configuration-not-found': return 'Firebase Auth is not configured for this project. Enable Authentication in Firebase Console.'
+    default: return code ? `Sign-in failed (${code}). Check the browser console.` : 'Something went wrong. Try again.'
   }
 }
 
@@ -145,6 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await signInWithPopup(auth, googleProvider)
     } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[phantom] Google sign-in failed:', err)
       const code = (err as { code?: string }).code ?? ''
       throw new Error(authErrorMessage(code))
     }

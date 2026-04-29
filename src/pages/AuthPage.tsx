@@ -115,7 +115,7 @@ const AuthPage = memo(({ mode }: AuthPageProps) => {
       >
         <Link to="/" className="flex items-center gap-2 no-underline mb-10">
           <div className="w-4 h-4 bg-phantom-lime" />
-          <span className="font-display font-bold text-[18px] text-phantom-text-primary">PHANTOM&copy;</span>
+          <span className="font-display font-bold text-[18px] text-phantom-text-primary">PHANTOM</span>
         </Link>
 
         <h1 className="font-display font-bold text-[42px] text-phantom-text-primary leading-tight mb-4">
@@ -244,8 +244,8 @@ const AuthPage = memo(({ mode }: AuthPageProps) => {
                 try {
                   await loginWithGoogle()
                   navigate('/dashboard')
-                } catch {
-                  setError('Google sign-in unavailable.')
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Google sign-in failed.')
                 } finally {
                   setLoading(false)
                 }

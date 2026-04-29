@@ -45,7 +45,7 @@ const AppSidebar = memo(() => {
         <Link to="/dashboard" className="flex items-center gap-2 no-underline mb-5">
           <div className="w-4 h-4 bg-phantom-lime flex-shrink-0" />
           <span className="font-display font-bold text-[16px] text-phantom-text-primary tracking-widest">
-            PHANTOM&copy;
+            PHANTOM
           </span>
         </Link>
 
