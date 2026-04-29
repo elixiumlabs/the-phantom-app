@@ -23,7 +23,7 @@ const PhaseFlipCard = memo(({
 
   return (
     <div
-      className="group relative h-[340px] w-full [perspective:2000px]"
+      className="group relative h-[420px] w-full [perspective:2000px]"
       onMouseEnter={() => setIsFlipped(true)}
       onMouseLeave={() => setIsFlipped(false)}
       onFocus={() => setIsFlipped(true)}
@@ -97,10 +97,10 @@ const PhaseFlipCard = memo(({
           className={cn(
             'absolute inset-0 h-full w-full',
             '[backface-visibility:hidden] [transform:rotateY(180deg)]',
-            'rounded-2xl p-6',
+            'rounded-2xl p-5',
             'bg-gradient-to-b from-phantom-surface to-phantom-black',
             'border border-phantom-border',
-            'shadow-lg flex flex-col',
+            'shadow-lg flex flex-col overflow-hidden',
             'transition-all duration-700',
             'group-hover:border-phantom-lime/40 group-hover:shadow-[0_0_40px_rgba(137,243,54,0.12)]',
             isFlipped ? 'opacity-100' : 'opacity-0',
@@ -136,10 +136,10 @@ const PhaseFlipCard = memo(({
           </div>
 
           {badge && (
-            <div className="mt-6 border-t border-phantom-border-subtle pt-5">
+            <div className="mt-4 border-t border-phantom-border-subtle pt-4 shrink-0">
               <div
                 className={cn(
-                  'group/badge relative -m-3 flex items-center justify-between rounded-xl p-3',
+                  'group/badge relative -mx-1 flex items-center justify-between rounded-xl px-3 py-2.5',
                   'bg-phantom-black/40',
                   'transition-all duration-300',
                   'hover:bg-phantom-lime/10 hover:scale-[1.02] hover:cursor-default',
