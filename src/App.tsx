@@ -30,6 +30,7 @@ import VaultPage from '@/pages/app/VaultPage'
 import SignalTrackerPage from '@/pages/app/SignalTrackerPage'
 import TemplatesPage from '@/pages/app/TemplatesPage'
 import BlogPage from '@/pages/BlogPage'
+import RefundPolicyPage from '@/pages/RefundPolicyPage'
 
 const LandingPage = memo(() => (
   <div className="relative min-h-screen">
@@ -112,6 +113,7 @@ const AppRoutes = memo(() => (
     } />
 
     <Route path="/blog" element={<BlogPage />} />
+    <Route path="/refund-policy" element={<RefundPolicyPage />} />
 
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>

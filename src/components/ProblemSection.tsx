@@ -37,7 +37,7 @@ const ProblemSection = memo(() => {
         </motion.p>
 
         <motion.h2
-          className="font-display font-bold text-[40px] text-phantom-text-primary leading-tight max-w-3xl mb-16"
+          className="font-display font-bold text-[40px] text-phantom-text-primary leading-tight max-w-3xl mb-16 tracking-normal"
           initial={{ opacity: 0, y: 12 }}
           animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
           transition={{ duration: 0.4, ease: 'easeOut', delay: 0.05 }}

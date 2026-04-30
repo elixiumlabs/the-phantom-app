@@ -103,12 +103,12 @@ const TestimonialsSection = memo(() => {
         <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10" style={{ background: 'linear-gradient(to right, #0a0a0a, transparent)' }} />
         <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10" style={{ background: 'linear-gradient(to left, #0a0a0a, transparent)' }} />
 
-        <Marquee duration={50} direction="left">
+        <Marquee duration={25} direction="left">
           {TESTIMONIALS_ROW_1.map(({ quote, attr, role }) => (
             <TestimonialCard key={attr} quote={quote} attr={attr} role={role} />
           ))}
         </Marquee>
-        <Marquee duration={50} direction="right">
+        <Marquee duration={25} direction="right">
           {TESTIMONIALS_ROW_2.map(({ quote, attr, role }) => (
             <TestimonialCard key={attr} quote={quote} attr={attr} role={role} />
           ))}

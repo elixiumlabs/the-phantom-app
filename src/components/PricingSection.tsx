@@ -42,12 +42,12 @@ const PricingSection = memo(() => {
   return (
     <section id="pricing" className="bg-[#080808] py-32 px-6" ref={ref}>
       <div className="max-w-6xl mx-auto">
-        <motion.p className="label text-phantom-lime mb-6" {...fadeUp(0)} animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}>
+        <motion.p className="label text-phantom-lime mb-6 text-center" {...fadeUp(0)} animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}>
           Pricing
         </motion.p>
 
         <motion.h2
-          className="font-display font-bold text-[40px] text-phantom-text-primary leading-tight mb-10"
+          className="font-display font-bold text-[40px] text-phantom-text-primary leading-tight mb-10 text-center"
           {...fadeUp(0.05)}
           animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
         >

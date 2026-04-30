@@ -17,7 +17,7 @@ export function Marquee({
   return (
     <div
       {...props}
-      className={cn("group flex overflow-hidden", className)}
+      className={cn("flex overflow-hidden", className)}
       style={{ "--duration": `${duration}s`, "--gap": "1rem", gap: "1rem" } as React.CSSProperties}
     >
       {Array(repeat)
@@ -26,7 +26,7 @@ export function Marquee({
           <div
             key={i}
             className={cn(
-              "flex shrink-0 justify-around group-hover-pause",
+              "flex shrink-0 justify-around",
               direction === "left" ? "animate-marquee-left" : "animate-marquee-right"
             )}
             style={{ gap: "1rem" }}
