@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
-import { BrandProvider } from '@/contexts/BrandContext'
+import { ProjectProvider } from '@/contexts/ProjectContext'
 
 // Landing page
 import LiquidBackground from '@/components/LiquidBackground'
@@ -85,7 +85,7 @@ const AppRoutes = memo(() => (
       <RequireAuth><DashboardPage /></RequireAuth>
     } />
 
-    <Route path="/brand/:id" element={
+    <Route path="/project/:id" element={
       <RequireAuth><BrandLayout /></RequireAuth>
     }>
       <Route index element={<Navigate to="identify" replace />} />
@@ -121,9 +121,9 @@ AppRoutes.displayName = 'AppRoutes'
 const App = memo(() => (
   <BrowserRouter>
     <AuthProvider>
-      <BrandProvider>
+      <ProjectProvider>
         <AppRoutes />
-      </BrandProvider>
+      </ProjectProvider>
     </AuthProvider>
   </BrowserRouter>
 ))

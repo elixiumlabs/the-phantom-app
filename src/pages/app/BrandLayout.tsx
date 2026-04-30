@@ -1,29 +1,39 @@
-import { memo } from 'react'
+import { memo, useEffect } from 'react'
 import { Outlet, NavLink, useParams, useNavigate } from 'react-router-dom'
 import { CheckCircle, Lock, ArrowLeft } from 'lucide-react'
-import { useBrands, type Phase } from '@/contexts/BrandContext'
+import { useProjects } from '@/contexts/ProjectContext'
 import AppSidebar from '@/components/app/AppSidebar'
 
-const PHASES: { id: Phase; label: string }[] = [
-  { id: 'identify', label: '01 Ghost Identity' },
-  { id: 'test', label: '02 Silent Test' },
-  { id: 'iterate', label: '03 Iteration Loop' },
-  { id: 'lock', label: '04 Lock In' },
+const PHASES: { id: number; path: string; label: string }[] = [
+  { id: 1, path: 'identify', label: '01 Ghost Identity' },
+  { id: 2, path: 'test', label: '02 Silent Test' },
+  { id: 3, path: 'iterate', label: '03 Iteration Loop' },
+  { id: 4, path: 'lock', label: '04 Lock In' },
 ]
-
-const PHASE_ORDER: Phase[] = ['identify', 'test', 'iterate', 'lock', 'complete']
-
-function phaseIndex(p: Phase) {
-  return PHASE_ORDER.indexOf(p)
-}
 
 const BrandLayout = memo(() => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getBrand } = useBrands()
-  const brand = getBrand(id!)
+  const { currentProject, setCurrentProjectId, loading } = useProjects()
 
-  if (!brand) {
+  // Set current project when route changes
+  useEffect(() => {
+    if (id) setCurrentProjectId(id)
+    return () => setCurrentProjectId(null)
+  }, [id, setCurrentProjectId])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-phantom-black">
+        <AppSidebar />
+        <main className="flex-1 ml-60 flex items-center justify-center">
+          <span className="label text-phantom-lime">Loading project...</span>
+        </main>
+      </div>
+    )
+  }
+
+  if (!currentProject) {
     return (
       <div className="flex min-h-screen bg-phantom-black">
         <AppSidebar />
@@ -31,10 +41,10 @@ const BrandLayout = memo(() => {
           <div className="text-center">
             <p className="font-code text-[13px] text-phantom-text-muted mb-4">404</p>
             <h1 className="font-display font-bold text-[24px] text-phantom-text-primary mb-3">
-              Brand not found.
+              Project not found.
             </h1>
             <p className="font-body text-[14px] text-phantom-text-secondary mb-6">
-              This brand does not exist or was deleted.
+              This project does not exist or was deleted.
             </p>
             <button className="btn-primary" onClick={() => navigate('/dashboard')}>
               <ArrowLeft size={14} /> Back to dashboard
@@ -45,7 +55,7 @@ const BrandLayout = memo(() => {
     )
   }
 
-  const currentPhaseIdx = phaseIndex(brand.currentPhase)
+  const currentPhaseIdx = currentProject.current_phase
 
   return (
     <div className="flex min-h-screen bg-phantom-black">
@@ -54,16 +64,15 @@ const BrandLayout = memo(() => {
       <div className="flex-1 ml-60 flex flex-col">
         {/* Phase nav bar */}
         <nav className="h-14 border-b border-phantom-border-subtle bg-[#0d0d0d] flex items-stretch px-2 gap-0 overflow-x-auto shrink-0 sticky top-0 z-30">
-          {PHASES.map(({ id: phaseId, label }) => {
-            const phaseIdx = phaseIndex(phaseId)
-            const isCompleted = phaseIdx < currentPhaseIdx
-            const isLocked = phaseIdx > currentPhaseIdx
-            const isActive = phaseId === brand.currentPhase
+          {PHASES.map(({ id: phaseId, path, label }) => {
+            const isCompleted = currentProject[`phase_${phaseId}_completed` as keyof typeof currentProject] === true
+            const isLocked = phaseId > currentPhaseIdx
+            const isActive = phaseId === currentPhaseIdx
 
             return (
               <NavLink
                 key={phaseId}
-                to={`/brand/${id}/${phaseId}`}
+                to={`/project/${id}/${path}`}
                 className={({ isActive: navActive }) =>
                   [
                     'flex items-center gap-2 font-body text-[13px] px-5 py-1 transition-colors duration-150 border-b-2 whitespace-nowrap',
@@ -94,7 +103,7 @@ const BrandLayout = memo(() => {
           {/* Brand name right-aligned */}
           <div className="ml-auto flex items-center pr-4">
             <span className="font-display font-semibold text-[13px] text-phantom-text-muted truncate max-w-[140px]">
-              {brand.name}
+              {currentProject.name}
             </span>
           </div>
         </nav>

@@ -1,0 +1,9 @@
+[debug] [2026-04-30T00:30:02.607Z] [Firebase Plugin] Activating Firebase extension.
+[debug] [2026-04-30T00:30:05.693Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2026-04-30T00:30:05.699Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-30T00:30:05.700Z] > authorizing via signed-in user (empressempiresllc@gmail.com)
+[debug] [2026-04-30T00:30:05.707Z] Checked if tokens are valid: false, expires at: 1776007980344
+[debug] [2026-04-30T00:30:05.708Z] Checked if tokens are valid: false, expires at: 1776007980344
+[debug] [2026-04-30T00:30:05.709Z] > refreshing access token with scopes: []
+[debug] [2026-04-30T00:30:05.710Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-04-30T00:30:05.710Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
