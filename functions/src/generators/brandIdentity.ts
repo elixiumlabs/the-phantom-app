@@ -1,15 +1,14 @@
-import { onCall } from 'firebase-functions/v2/https'
+import * as admin from 'firebase-admin'
 import { z } from 'zod'
-import { ANTHROPIC_API_KEY, generateJSON } from '../lib/anthropic'
-import { gate, meterUsage, requirePlan, validate } from '../lib/guards'
+import { appendGenerationHistory, defineEngine } from '../lib/engine'
 
 const Input = z.object({
-  positioning: z.string().min(5).max(800),
-  audience: z.string().min(3).max(500),
-  voice_adjectives: z.array(z.string().min(2)).max(3).optional(),
+  project_id: z.string().min(1),
+  audience_override: z.string().max(500).optional(),
 })
+type In = z.infer<typeof Input>
 
-interface Output {
+interface Out extends Record<string, unknown> {
   visual_direction: 'minimal' | 'editorial' | 'bold' | 'warm' | 'technical' | 'other'
   visual_reasoning: string
   color_mood: { primary_feel: string; avoid: string[]; example_palette: string[] }
@@ -18,28 +17,60 @@ interface Output {
   one_thing_to_avoid: string
 }
 
-export const recommendBrandIdentity = onCall(
-  { secrets: [ANTHROPIC_API_KEY], region: 'us-central1' },
-  async (req) => {
-    const uid = await gate(req)
-    await requirePlan(uid, ['free', 'phantom', 'phantom_pro'])
-    await meterUsage(uid, 'recommendBrandIdentity', 8)
-    const input = validate(Input, req.data)
+export const recommendBrandIdentity = defineEngine<In, Out>({
+  id: 'recommendBrandIdentity',
+  input: Input,
+  plans: ['free', 'phantom', 'phantom_pro'],
+  dailyLimit: 8,
+  maxTokens: 1400,
+  temperature: 0.5,
+  prompt: async ({ input, project }) => {
+    if (!project) throw new Error('project required')
+    const [liSnap, giSnap] = await Promise.all([
+      project.ref.collection('lock_in').doc('main').get(),
+      project.ref.collection('ghost_identity').doc('main').get(),
+    ])
+    const li = liSnap.data() ?? {}
+    const gi = giSnap.data() ?? {}
+    const positioning = li.generated_positioning || gi.positioning_statement || ''
+    const audience = input.audience_override ?? li.buyer_problem_language ?? ''
+    const voice = (li.final_voice_adjectives ?? gi.voice_adjectives ?? []) as string[]
 
-    return generateJSON<Output>({
-      user: `Recommend brand identity direction for a brand whose positioning is now LOCKED from buyer data.
+    if (!positioning) throw new Error('Locked positioning required')
 
-Locked positioning: """${input.positioning}"""
-Audience: """${input.audience}"""
-${input.voice_adjectives?.length ? `Voice adjectives: ${input.voice_adjectives.join(', ')}` : ''}
+    return `Recommend brand identity direction for a brand whose positioning is now LOCKED from buyer data.
+
+Locked positioning: """${positioning}"""
+Audience (in buyer language): """${audience}"""
+${voice.length ? `Voice adjectives: ${voice.join(', ')}` : ''}
 
 The identity must REFLECT the validated positioning, not the founder's aspirational taste.
 
 Return JSON: { "visual_direction": "minimal"|"editorial"|"bold"|"warm"|"technical"|"other", "visual_reasoning": string, "color_mood": { "primary_feel": string, "avoid": string[], "example_palette": string[] }, "typography_mood": { "display_feel": string, "body_feel": string, "avoid": string[] }, "voice_pillars": string[], "one_thing_to_avoid": string }
 
-example_palette: 3-5 short hex codes. avoid arrays: list aesthetic moves the audience would interpret wrong.`,
-      maxTokens: 1400,
-      temperature: 0.5,
-    })
+example_palette: 3-5 short hex codes. avoid arrays: list aesthetic moves the audience would interpret wrong.`
   },
-)
+  persist: async (ctx, output) => {
+    if (!ctx.project) return { written_paths: [] }
+    const written: string[] = []
+    written.push(
+      await appendGenerationHistory({
+        project_ref: ctx.project.ref,
+        generator: 'recommendBrandIdentity',
+        input: ctx.input,
+        output,
+      }),
+    )
+    const ref = ctx.project.ref.collection('lock_in').doc('main')
+    await ref.set(
+      {
+        ai_brand_identity: output,
+        ai_brand_identity_generated_at: admin.firestore.FieldValue.serverTimestamp(),
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    )
+    written.push(ref.path)
+    return { written_paths: written }
+  },
+})

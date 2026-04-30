@@ -55,17 +55,36 @@ service cloud.firestore {
         && request.resource.data.user_id == resource.data.user_id;
       allow delete: if isSignedIn() && resource.data.user_id == request.auth.uid;
 
-      // Generic phase subcollections (ghost_identity, silent_test, iteration_loop, lock_in, outreach_log, iteration_versions).
-      match /{subcollection}/{docId} {
-        allow read: if ownsProject(projectId);
-        allow create, update, delete: if ownsProject(projectId);
+      // Phase data the user edits directly.
+      match /ghost_identity/{docId} {
+        allow read, create, update, delete: if ownsProject(projectId);
+      }
+      match /silent_test/{docId} {
+        allow read, create, update, delete: if ownsProject(projectId);
+      }
+      match /iteration_loop/{docId} {
+        allow read, create, update, delete: if ownsProject(projectId);
+      }
+      match /lock_in/{docId} {
+        allow read, create, update, delete: if ownsProject(projectId);
+      }
+      match /outreach_log/{docId} {
+        allow read, create, update, delete: if ownsProject(projectId);
+      }
+      match /iteration_versions/{docId} {
+        // version_number + flags are server-stamped in the trigger.
+        allow read, create, update, delete: if ownsProject(projectId);
       }
 
-      // Insights — server-only.
-      match /insights/{docId} {
-        allow read: if ownsProject(projectId);
-        allow write: if false;
-      }
+      // Server-managed subcollections — readable by owner, writable only by server.
+      match /insights/{docId}              { allow read: if ownsProject(projectId); allow write: if false; }
+      match /generations/{docId}           { allow read: if ownsProject(projectId); allow write: if false; }
+      match /audience_language/{docId}     { allow read: if ownsProject(projectId); allow write: if false; }
+      match /objection_library/{docId}     { allow read: if ownsProject(projectId); allow write: if false; }
+      match /competitive_gap/{docId}       { allow read: if ownsProject(projectId); allow write: if false; }
+      match /iteration_suggestions/{docId} { allow read, update: if ownsProject(projectId); allow create, delete: if false; }
+      match /outreach_templates/{docId}    { allow read, delete: if ownsProject(projectId); allow create, update: if false; }
+      match /proof_package/{docId}         { allow read: if ownsProject(projectId); allow write: if false; }
     }
 
     // Proof vault — owner-only. file_url + storage_path written server-side via onFinalize.

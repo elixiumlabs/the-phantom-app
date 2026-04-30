@@ -1,14 +1,15 @@
-import { onCall } from 'firebase-functions/v2/https'
+import * as admin from 'firebase-admin'
 import { z } from 'zod'
-import { ANTHROPIC_API_KEY, generateJSON } from '../lib/anthropic'
-import { gate, meterUsage, requirePlan, validate } from '../lib/guards'
+import { appendGenerationHistory, defineEngine } from '../lib/engine'
 
 const Input = z.object({
   problem_statement: z.string().min(10).max(1000),
   audience: z.string().min(3).max(500),
+  project_id: z.string().min(1).optional(),
 })
+type In = z.infer<typeof Input>
 
-interface Output {
+interface Out extends Record<string, unknown> {
   existing_solutions: Array<{
     name: string
     category: 'incumbent_software' | 'service_provider' | 'community' | 'content_creator' | 'diy_method' | 'other'
@@ -19,16 +20,14 @@ interface Output {
   primary_wedge: string
 }
 
-export const competitiveGapAnalysis = onCall(
-  { secrets: [ANTHROPIC_API_KEY], region: 'us-central1' },
-  async (req) => {
-    const uid = await gate(req)
-    await requirePlan(uid, ['phantom_pro'])
-    await meterUsage(uid, 'competitiveGapAnalysis', 8)
-    const input = validate(Input, req.data)
-
-    return generateJSON<Output>({
-      user: `Map the competitive landscape and find the gap.
+export const competitiveGapAnalysis = defineEngine<In, Out>({
+  id: 'competitiveGapAnalysis',
+  input: Input,
+  plans: ['phantom_pro'],
+  dailyLimit: 8,
+  maxTokens: 2400,
+  temperature: 0.5,
+  prompt: ({ input }) => `Map the competitive landscape and find the gap.
 
 Problem: """${input.problem_statement}"""
 Audience: """${input.audience}"""
@@ -40,8 +39,23 @@ Then surface 2-4 GAPS — outcomes the audience needs that the existing landscap
 Return JSON: { "existing_solutions": [{ "name": string, "category": ..., "does_well": string[], "consistently_misses": string[] }], "gaps": [{ "gap": string, "why_unfilled": string, "user_wedge": string }], "primary_wedge": string }
 
 primary_wedge: ONE sentence — the specific gap the user is best positioned to fill.`,
-      maxTokens: 2400,
-      temperature: 0.5,
-    })
+  persist: async (ctx, output) => {
+    if (!ctx.project) return { written_paths: [] }
+    const written: string[] = []
+    written.push(
+      await appendGenerationHistory({
+        project_ref: ctx.project.ref,
+        generator: 'competitiveGapAnalysis',
+        input: ctx.input,
+        output,
+      }),
+    )
+    const ref = ctx.project.ref.collection('competitive_gap').doc('main')
+    await ref.set(
+      { ...output, generated_at: admin.firestore.FieldValue.serverTimestamp() },
+      { merge: true },
+    )
+    written.push(ref.path)
+    return { written_paths: written }
   },
-)
+})

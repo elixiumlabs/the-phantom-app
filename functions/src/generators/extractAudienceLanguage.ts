@@ -1,14 +1,15 @@
-import { onCall } from 'firebase-functions/v2/https'
+import * as admin from 'firebase-admin'
 import { z } from 'zod'
-import { ANTHROPIC_API_KEY, generateJSON } from '../lib/anthropic'
-import { meterUsage, requireAuth, requirePlan, validate } from '../lib/guards'
+import { appendGenerationHistory, defineEngine } from '../lib/engine'
 
 const Input = z.object({
   problemStatement: z.string().min(10).max(1000),
   audienceDescription: z.string().min(5).max(1000),
+  project_id: z.string().min(1).optional(),
 })
+type In = z.infer<typeof Input>
 
-interface Output {
+interface Out extends Record<string, unknown> {
   problemPhrases: string[]
   emotionalDescriptors: string[]
   failedAttemptPhrases: string[]
@@ -17,23 +18,19 @@ interface Output {
   examples: Array<{ verbatim: string; whereSaid: string }>
 }
 
-export const extractAudienceLanguage = onCall(
-  { secrets: [ANTHROPIC_API_KEY], region: 'us-central1' },
-  async (req) => {
-    const uid = requireAuth(req)
-    await requirePlan(uid, ['free', 'phantom', 'phantom_pro'])
-    await meterUsage(uid, 'extractAudienceLanguage', 15)
-
-    const { problemStatement, audienceDescription } = validate(Input, req.data)
-
-    return generateJSON<Output>({
-      user: `Extract the LITERAL language this audience uses when describing their problem in their own words.
+export const extractAudienceLanguage = defineEngine<In, Out>({
+  id: 'extractAudienceLanguage',
+  input: Input,
+  plans: ['phantom_pro'],
+  dailyLimit: 15,
+  maxTokens: 2000,
+  prompt: ({ input }) => `Extract the LITERAL language this audience uses when describing their problem in their own words.
 
 Problem statement:
-"""${problemStatement}"""
+"""${input.problemStatement}"""
 
 Audience:
-"""${audienceDescription}"""
+"""${input.audienceDescription}"""
 
 Return verbatim-style phrases. Not your reframe. Not your interpretation. The actual words this audience would type into Reddit, Google, group chats, or DMs.
 
@@ -45,7 +42,27 @@ Return verbatim-style phrases. Not your reframe. Not your interpretation. The ac
 - examples: 4-6 plausible verbatim quotes you would expect to see, paired with where they would be said (e.g. "r/specific-subreddit", "private group chat", "1:1 venting", "Google search")
 
 Return JSON: { "problemPhrases": string[], "emotionalDescriptors": string[], "failedAttemptPhrases": string[], "outcomePhrases": string[], "jargonToAvoid": string[], "examples": [{ "verbatim": string, "whereSaid": string }] }`,
-      maxTokens: 2000,
-    })
+  persist: async (ctx, output) => {
+    const written: string[] = []
+    if (ctx.project) {
+      written.push(
+        await appendGenerationHistory({
+          project_ref: ctx.project.ref,
+          generator: 'extractAudienceLanguage',
+          input: ctx.input,
+          output,
+        }),
+      )
+      const ref = ctx.project.ref.collection('audience_language').doc('main')
+      await ref.set(
+        {
+          ...output,
+          generated_at: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      )
+      written.push(ref.path)
+    }
+    return { written_paths: written }
   },
-)
+})

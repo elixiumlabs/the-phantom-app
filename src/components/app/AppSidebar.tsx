@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext'
 
 const NAV_MAIN = [
   { label: 'Dashboard',  href: '/dashboard', icon: LayoutDashboard },
-  { label: 'My Brands',  href: '/dashboard', icon: Layers },
 ]
 
 const NAV_TOOLS = [
@@ -23,7 +22,7 @@ const AppSidebar = memo(() => {
   const { pathname } = useLocation()
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard' || pathname.startsWith('/brand/')
+    if (href === '/dashboard') return pathname === '/dashboard' || pathname.startsWith('/project/')
     return pathname === href
   }
 
@@ -58,8 +57,8 @@ const AppSidebar = memo(() => {
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-body text-[13px] text-phantom-text-primary truncate">{user?.name}</p>
-            <span className={`badge text-[9px] mt-0.5 ${user?.plan === 'pro' ? 'badge-active' : ''}`}>
-              {user?.plan ?? 'free'}
+            <span className={`badge text-[9px] mt-0.5 ${user?.plan === 'phantom_pro' ? 'badge-active' : ''}`}>
+              {user?.plan === 'phantom_pro' ? 'PRO' : user?.plan === 'phantom' ? 'PHANTOM' : 'FREE'}
             </span>
           </div>
         </div>
@@ -97,9 +96,9 @@ const AppSidebar = memo(() => {
             <p className="font-body text-[12px] text-phantom-text-primary mb-2">
               Unlock all features
             </p>
-            <button className="btn-primary w-full text-[12px] py-2">
-              Upgrade to Pro
-            </button>
+            <Link to="/settings" className="btn-primary w-full text-[12px] py-2 text-center no-underline block">
+              Upgrade to PRO
+            </Link>
           </div>
         </div>
       )}
