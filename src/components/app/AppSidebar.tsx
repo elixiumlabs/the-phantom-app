@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Layers, Shield, Activity, FileText, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Shield, Activity, FileText, Settings, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 const NAV_MAIN = [

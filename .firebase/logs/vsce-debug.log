@@ -7,3 +7,11 @@
 [debug] [2026-04-30T00:30:05.709Z] > refreshing access token with scopes: []
 [debug] [2026-04-30T00:30:05.710Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
 [debug] [2026-04-30T00:30:05.710Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-04-30T00:30:06.231Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-04-30T00:30:06.232Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-04-30T00:30:06.254Z] [Firebase Plugin] User found:  empressempiresllc@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2026-04-30T00:30:06.256Z] Checked if tokens are valid: true, expires at: 1777512605232
+[debug] [2026-04-30T00:30:06.257Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-04-30T00:30:06.653Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-04-30T00:30:06.654Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]

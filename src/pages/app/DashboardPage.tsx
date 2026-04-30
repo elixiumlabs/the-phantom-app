@@ -14,7 +14,7 @@ const PHASE_LABELS: Record<number, string> = {
   4: 'Phase 04 — Lock In',
 }
 
-const ProjectCard = memo(({ project, onDelete }: { project: Project; onDelete: (id: string) => void }) => {
+const ProjectCard = memo(({ project }: { project: Project }) => {
   const navigate = useNavigate()
   const { outreachLog, proofVault } = useProjects()
   const projectOutreach = outreachLog.filter(o => o.project_id === project.id)
@@ -359,7 +359,7 @@ const DashboardPage = memo(() => {
           ) : (
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
               {userProjects.map(p => (
-                <ProjectCard key={p.id} project={p} onDelete={() => {}} />
+                <ProjectCard key={p.id} project={p} />
               ))}
             </div>
           )}
