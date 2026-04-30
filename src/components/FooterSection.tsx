@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { Link } from 'react-router-dom'
 import { Twitter, Linkedin } from 'lucide-react'
 
 const FooterSection = memo(() => (
@@ -23,13 +24,26 @@ const FooterSection = memo(() => (
         <div>
           <p className="label mb-4">Product</p>
           <ul className="space-y-2">
-            {['Features', 'Pricing', 'Changelog', 'Roadmap'].map(item => (
-              <li key={item}>
-                <a href={`#${item.toLowerCase()}`} className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
-                  {item}
-                </a>
-              </li>
-            ))}
+            <li>
+              <Link to="/features" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
+                Features
+              </Link>
+            </li>
+            <li>
+              <a href="#pricing" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
+                Pricing
+              </a>
+            </li>
+            <li>
+              <Link to="/status" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
+                System Status
+              </Link>
+            </li>
+            <li>
+              <Link to="/affiliates" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
+                Affiliates
+              </Link>
+            </li>
           </ul>
         </div>
 
@@ -37,13 +51,26 @@ const FooterSection = memo(() => (
         <div>
           <p className="label mb-4">Legal</p>
           <ul className="space-y-2">
-            {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(item => (
-              <li key={item}>
-                <a href="#" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
-                  {item}
-                </a>
-              </li>
-            ))}
+            <li>
+              <Link to="/refund-policy" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
+                Refund Policy
+              </Link>
+            </li>
+            <li>
+              <Link to="/privacy-policy" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
+                Privacy Policy
+              </Link>
+            </li>
+            <li>
+              <Link to="/terms-of-service" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
+                Terms of Service
+              </Link>
+            </li>
+            <li>
+              <Link to="/cookie-policy" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
+                Cookie Policy
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

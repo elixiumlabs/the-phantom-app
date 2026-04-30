@@ -31,6 +31,12 @@ import SignalTrackerPage from '@/pages/app/SignalTrackerPage'
 import TemplatesPage from '@/pages/app/TemplatesPage'
 import BlogPage from '@/pages/BlogPage'
 import RefundPolicyPage from '@/pages/RefundPolicyPage'
+import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage'
+import TermsOfServicePage from '@/pages/TermsOfServicePage'
+import CookiePolicyPage from '@/pages/CookiePolicyPage'
+import FeaturesPage from '@/pages/FeaturesPage'
+import SystemStatusPage from '@/pages/SystemStatusPage'
+import AffiliatesPage from '@/pages/AffiliatesPage'
 
 const LandingPage = memo(() => (
   <div className="relative min-h-screen">
@@ -113,7 +119,13 @@ const AppRoutes = memo(() => (
     } />
 
     <Route path="/blog" element={<BlogPage />} />
+    <Route path="/features" element={<FeaturesPage />} />
+    <Route path="/status" element={<SystemStatusPage />} />
+    <Route path="/affiliates" element={<AffiliatesPage />} />
     <Route path="/refund-policy" element={<RefundPolicyPage />} />
+    <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+    <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+    <Route path="/cookie-policy" element={<CookiePolicyPage />} />
 
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
