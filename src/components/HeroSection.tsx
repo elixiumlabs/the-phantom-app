@@ -30,7 +30,7 @@ const HeroSection = memo(() => (
 
     {/* Headline */}
     <motion.h1
-      className="font-display font-bold text-phantom-text-primary max-w-4xl mx-auto mb-6 relative z-10"
+      className="font-display font-bold text-phantom-text-primary max-w-4xl mx-auto mb-6 relative z-10 tracking-normal"
       style={{ fontSize: 'clamp(36px, 7vw, 72px)', lineHeight: 1.05 }}
       {...fadeUp(0.1)}
     >

@@ -183,7 +183,7 @@ const FeaturesPage = memo(() => {
     <div className="relative min-h-screen bg-phantom-black">
       <NavigationDock />
 
-      <main className="pt-24 pb-32 px-6">
+      <main className="pt-32 pb-32 px-6">
         {/* Hero */}
         <div className="max-w-6xl mx-auto mb-32">
           <motion.div
@@ -193,7 +193,7 @@ const FeaturesPage = memo(() => {
             transition={{ duration: 0.4, ease: 'easeOut' }}
           >
             <p className="label text-phantom-lime mb-4">Features</p>
-            <h1 className="font-display font-bold text-[48px] md:text-[72px] text-phantom-text-primary leading-tight mb-6">
+            <h1 className="font-display font-bold text-[48px] md:text-[64px] text-phantom-text-primary leading-tight mb-6">
               Everything you need to<br />validate before you launch.
             </h1>
             <p className="font-body text-[18px] text-phantom-text-secondary max-w-2xl mx-auto mb-10">

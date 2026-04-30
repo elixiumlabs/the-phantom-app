@@ -1,6 +1,6 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { DollarSign, Users, TrendingUp, Gift, CheckCircle, ArrowRight } from 'lucide-react'
+import { DollarSign, Users, TrendingUp, Gift, CheckCircle, ArrowRight, Calculator } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import NavigationDock from '@/components/NavigationDock'
 import FooterSection from '@/components/FooterSection'
@@ -63,6 +63,12 @@ const FAQ = [
 ]
 
 const AffiliatesPage = memo(() => {
+  const [referrals, setReferrals] = useState(10)
+  
+  const monthlyEarnings = referrals * 13.20
+  const annualEarnings = monthlyEarnings * 12
+  const threeYearEarnings = annualEarnings * 3
+
   return (
     <div className="relative min-h-screen bg-phantom-black">
       <NavigationDock />
@@ -145,12 +151,88 @@ const AffiliatesPage = memo(() => {
             </div>
           </motion.div>
 
-          {/* Commission breakdown */}
+          {/* Earnings Calculator */}
           <motion.div
             className="mb-24"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut', delay: 0.3 }}
+          >
+            <div className="card bg-phantom-surface-dark border-phantom-lime/20 max-w-3xl mx-auto">
+              <div className="flex items-center gap-3 mb-6">
+                <Calculator className="text-phantom-lime" size={28} />
+                <h2 className="font-display font-bold text-[28px] text-phantom-text-primary">
+                  Earnings Calculator
+                </h2>
+              </div>
+              
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="font-ui text-[15px] text-phantom-text-primary font-medium">
+                    Monthly referrals
+                  </label>
+                  <span className="font-code text-[24px] text-phantom-lime font-bold">
+                    {referrals}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  value={referrals}
+                  onChange={(e) => setReferrals(Number(e.target.value))}
+                  className="w-full h-2 bg-phantom-border rounded-lg appearance-none cursor-pointer"
+                  style={{
+                    background: `linear-gradient(to right, #89F336 0%, #89F336 ${referrals}%, #222222 ${referrals}%, #222222 100%)`
+                  }}
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <span className="font-body text-[12px] text-phantom-text-muted">1</span>
+                  <span className="font-body text-[12px] text-phantom-text-muted">100</span>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4 mb-6">
+                <div className="text-center p-4 rounded-xl bg-phantom-surface border border-phantom-border-subtle">
+                  <p className="font-ui text-[12px] text-phantom-text-muted uppercase tracking-wider mb-2">
+                    Monthly
+                  </p>
+                  <p className="font-code text-[28px] text-phantom-lime font-bold">
+                    ${monthlyEarnings.toLocaleString()}
+                  </p>
+                </div>
+                <div className="text-center p-4 rounded-xl bg-phantom-surface border border-phantom-border-subtle">
+                  <p className="font-ui text-[12px] text-phantom-text-muted uppercase tracking-wider mb-2">
+                    Annual
+                  </p>
+                  <p className="font-code text-[28px] text-phantom-lime font-bold">
+                    ${annualEarnings.toLocaleString()}
+                  </p>
+                </div>
+                <div className="text-center p-4 rounded-xl bg-phantom-surface border border-phantom-border-subtle">
+                  <p className="font-ui text-[12px] text-phantom-text-muted uppercase tracking-wider mb-2">
+                    3-Year Total
+                  </p>
+                  <p className="font-code text-[28px] text-phantom-lime font-bold">
+                    ${threeYearEarnings.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-phantom-border-subtle">
+                <p className="font-body text-[13px] text-phantom-text-secondary text-center">
+                  Based on {referrals} monthly referrals to Phantom Pro ($44/month). Earnings are recurring as long as customers remain subscribed.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Commission breakdown */}
+          <motion.div
+            className="mb-24"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: 'easeOut', delay: 0.35 }}
           >
             <div className="card bg-phantom-surface-dark border-phantom-lime/20 max-w-3xl mx-auto">
               <h2 className="font-display font-bold text-[28px] text-phantom-text-primary mb-6 text-center">
@@ -191,7 +273,7 @@ const AffiliatesPage = memo(() => {
             className="mb-16"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: 'easeOut', delay: 0.35 }}
+            transition={{ duration: 0.4, ease: 'easeOut', delay: 0.4 }}
           >
             <h2 className="font-display font-bold text-[32px] text-phantom-text-primary text-center mb-12">
               Frequently asked questions

@@ -1,7 +1,7 @@
 import * as admin from 'firebase-admin'
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { z } from 'zod'
-import { ANTHROPIC_API_KEY, generateJSON } from '../lib/anthropic'
+import { GEMINI_API_KEY, generateJSON } from '../lib/anthropic'
 import { gate, validate, enforceFreeLimit } from '../lib/guards'
 import { logActivity } from '../lib/activity'
 
@@ -23,10 +23,11 @@ interface RefinedSeed {
  * with that problem pre-filled in Phase 01.
  */
 export const completeOnboarding = onCall(
-  { secrets: [ANTHROPIC_API_KEY], region: 'us-central1' },
+  { secrets: [GEMINI_API_KEY], region: 'us-central1' },
   async (req): Promise<{ project_id: string }> => {
-    const uid = await gate(req)
-    const input = validate(Input, req.data)
+    try {
+      const uid = await gate(req)
+      const input = validate(Input, req.data)
 
     const db = admin.firestore()
     const userRef = db.doc(`users/${uid}`)
@@ -44,8 +45,10 @@ export const completeOnboarding = onCall(
       .get()
     await enforceFreeLimit(uid, 'active_projects', activeSnap.data().count)
 
-    const seed = await generateJSON<RefinedSeed>({
-      user: `A new user just finished Phantom onboarding. Refine their seed into a starting point for Phase 01.
+    let seed: RefinedSeed
+    try {
+      seed = await generateJSON<RefinedSeed>({
+        user: `A new user just finished Phantom onboarding. Refine their seed into a starting point for Phase 01.
 
 What they're building: """${input.what_building}"""
 They identify as: ${input.user_type}
@@ -54,9 +57,15 @@ Have they built in public before? ${input.built_in_public}${input.history_note ?
 Return JSON: { "refined_problem": string, "suggested_name": string }
 - refined_problem: A first-pass problem statement in Phantom format ("I help [X] who is experiencing [Y] to achieve [Z] without [W]"). It does not need to be perfect — it needs to be specific enough that the user can react to it and tighten it. Use their words where possible.
 - suggested_name: A short functional working name for the test (not a final brand). 1-3 words.`,
-      maxTokens: 600,
-      temperature: 0.6,
-    })
+        maxTokens: 600,
+        temperature: 0.6,
+      })
+    } catch (err) {
+      seed = {
+        refined_problem: input.what_building,
+        suggested_name: input.what_building.slice(0, 40).split(' ').slice(0, 3).join(' '),
+      }
+    }
 
     const now = admin.firestore.FieldValue.serverTimestamp()
     const projectRef = db.collection('projects').doc()
@@ -152,13 +161,22 @@ Return JSON: { "refined_problem": string, "suggested_name": string }
     )
 
     await batch.commit()
-    await logActivity({
-      user_id: uid,
-      project_id: projectRef.id,
-      action: 'project_created',
-      metadata: { source: 'onboarding' },
-    })
+    try {
+      await logActivity({
+        user_id: uid,
+        project_id: projectRef.id,
+        action: 'project_created',
+        metadata: { source: 'onboarding' },
+      })
+    } catch {
+      // Non-critical: activity logging failed
+    }
 
     return { project_id: projectRef.id }
+    } catch (err) {
+      console.error('completeOnboarding error:', err)
+      if (err instanceof HttpsError) throw err
+      throw new HttpsError('internal', err instanceof Error ? err.message : 'Failed to complete onboarding')
+    }
   },
 )

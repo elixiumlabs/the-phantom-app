@@ -30,9 +30,9 @@ const FooterSection = memo(() => (
               </Link>
             </li>
             <li>
-              <a href="#pricing" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
+              <Link to="/pricing" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">
                 Pricing
-              </a>
+              </Link>
             </li>
             <li>
               <Link to="/status" className="font-body text-[14px] text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline">

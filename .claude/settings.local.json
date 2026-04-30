@@ -6,7 +6,18 @@
       "Bash(npx vite *)",
       "Bash(npm install *)",
       "Bash(npx tailwindcss *)",
-      "Bash(node -e \"const c = require\\('./tailwind.config.ts'\\); console.log\\(JSON.stringify\\(c.default?.content || c.content\\)\\)\")"
+      "Bash(node -e \"const c = require\\('./tailwind.config.ts'\\); console.log\\(JSON.stringify\\(c.default?.content || c.content\\)\\)\")",
+      "Bash(firebase functions:secrets:access GEMINI_API_KEY)",
+      "Bash(npx firebase *)",
+      "Bash(\"/c/Program Files/nodejs/node.exe\" --version)",
+      "Bash(\"/c/Users/empre/AppData/Roaming/npm/firebase.cmd\" --version)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/empre/AppData/Roaming/npm:$PATH\")",
+      "Bash(firebase --version)",
+      "Bash(firebase login:list)",
+      "Bash(firebase use *)",
+      "Bash(firebase projects:list)",
+      "Bash(firebase functions:secrets:set GEMINI_API_KEY --data-file=-)",
+      "Bash(firebase deploy *)"
     ]
   }
 }

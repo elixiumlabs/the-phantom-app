@@ -9,8 +9,11 @@ import {
   refineProblemStatement,
   extractUnfairAdvantages,
   synthesizePositioning,
+  extractAudienceLanguage,
+  findWhereToTest,
   completePhase,
 } from '@/lib/functions'
+import GeneratorPanel from '@/components/app/GeneratorPanel'
 
 const PhaseIdentify = memo(() => {
   const { id } = useParams()
@@ -18,6 +21,7 @@ const PhaseIdentify = memo(() => {
 
   // Local form state
   const [problemDraft, setProblemDraft] = useState('')
+  const [audienceDescription, setAudienceDescription] = useState('')
   const [backgroundText, setBackgroundText] = useState('')
   const [selectedAdvantages, setSelectedAdvantages] = useState<string[]>([])
   const [workingName, setWorkingName] = useState('')
@@ -487,6 +491,160 @@ const PhaseIdentify = memo(() => {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Section 4 — Audience Language (PRO) */}
+      <div className="card mb-6">
+        <p className="label mb-2">Step 4 — Audience Language</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
+          Pull the verbatim phrases this audience uses about their problem, so your outreach lands in their words, not yours.
+        </p>
+
+        <label className="label text-phantom-text-secondary mb-2 block">
+          Describe the audience (one sentence)
+        </label>
+        <input
+          className="input mb-4"
+          value={audienceDescription}
+          onChange={(e) => setAudienceDescription(e.target.value)}
+          placeholder="e.g. neurodivergent freelancers in their late 20s who run their own service businesses"
+        />
+
+        <GeneratorPanel
+          title="Extract audience language"
+          description="Returns the literal words this audience uses — phrases, emotional descriptors, jargon to avoid, and 4-6 plausible quotes."
+          requiredPlan="phantom_pro"
+          disabled={!problemDraft.trim() || audienceDescription.trim().length < 5}
+          disabledReason="Add a problem statement and a one-line audience description first."
+          cta="Extract verbatim language"
+          run={() =>
+            extractAudienceLanguage({
+              problemStatement: problemDraft,
+              audienceDescription,
+              project_id: id,
+            })
+          }
+          renderResult={(out) => (
+            <div className="space-y-4">
+              <div>
+                <p className="label text-phantom-lime mb-2">Problem phrases</p>
+                <div className="flex flex-wrap gap-2">
+                  {out.problemPhrases.map((p, i) => (
+                    <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-black/40 border border-phantom-border-subtle rounded">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="label text-phantom-lime mb-2">Emotional descriptors</p>
+                <div className="flex flex-wrap gap-2">
+                  {out.emotionalDescriptors.map((p, i) => (
+                    <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-black/40 border border-phantom-border-subtle rounded">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="label text-phantom-lime mb-2">Jargon to avoid</p>
+                <div className="flex flex-wrap gap-2">
+                  {out.jargonToAvoid.map((p, i) => (
+                    <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-danger/10 border border-phantom-danger/30 rounded text-phantom-danger">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="label text-phantom-lime mb-2">Verbatim examples</p>
+                <div className="space-y-2">
+                  {out.examples.map((ex, i) => (
+                    <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                      <p className="font-body text-[13px] text-phantom-text-primary mb-1">"{ex.verbatim}"</p>
+                      <p className="font-body text-[11px] text-phantom-text-muted">{ex.whereSaid}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="font-body text-[11px] text-phantom-text-muted">
+                Saved to your project. You'll see these again in Phase 02 when you write outreach.
+              </p>
+            </div>
+          )}
+        />
+      </div>
+
+      {/* Section 5 — Where To Test */}
+      <div className="card mb-6">
+        <p className="label mb-2">Step 5 — Where To Test</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
+          Find the specific places this audience already gathers — subreddits, Discord servers, FB groups, niche forums. This list carries into Phase 02.
+        </p>
+
+        <GeneratorPanel
+          title="Find where to test"
+          description="Returns 8+ specific named communities with priority scores, plus 5-10 search queries you can paste into Google."
+          disabled={!problemDraft.trim() || audienceDescription.trim().length < 5}
+          disabledReason="Add a problem statement and a one-line audience description above."
+          cta="Find communities"
+          run={() =>
+            findWhereToTest({
+              problemStatement: problemDraft,
+              audienceDescription,
+              project_id: id,
+            })
+          }
+          renderResult={(out) => (
+            <div className="space-y-4">
+              <div>
+                <p className="label text-phantom-lime mb-2">Top communities</p>
+                <div className="space-y-2">
+                  {out.locations.map((loc, i) => (
+                    <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                      <div className="flex items-start justify-between gap-3 mb-1">
+                        <div>
+                          <p className="font-body text-[14px] text-phantom-text-primary font-medium">{loc.name}</p>
+                          <p className="font-body text-[11px] text-phantom-text-muted uppercase tracking-wide">
+                            {loc.channel.replace(/_/g, ' ')} · {loc.accessDifficulty} access
+                          </p>
+                        </div>
+                        <span className="font-code text-[12px] text-phantom-lime shrink-0">{loc.priorityScore}/100</span>
+                      </div>
+                      <p className="font-body text-[12px] text-phantom-text-secondary mb-2">{loc.whyAudienceIsHere}</p>
+                      <p className="font-body text-[11px] text-phantom-text-muted">
+                        Outreach style: {loc.outreachStyle}
+                      </p>
+                      {loc.url && (
+                        <a
+                          href={loc.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-body text-[11px] text-phantom-lime hover:underline"
+                        >
+                          {loc.url}
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="label text-phantom-lime mb-2">Search queries to find more</p>
+                <div className="space-y-1">
+                  {out.searchQueries.map((q, i) => (
+                    <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded px-3 py-2">
+                      <p className="font-code text-[12px] text-phantom-text-secondary">{q}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="font-body text-[11px] text-phantom-text-muted">
+                Saved. These appear in Phase 02 as your test locations.
+              </p>
+            </div>
+          )}
+        />
       </div>
 
       {/* Completion Gate */}

@@ -17,6 +17,7 @@ import FooterSection from '@/components/FooterSection'
 
 // Auth
 import AuthPage from '@/pages/AuthPage'
+import OnboardingPage from '@/pages/OnboardingPage'
 
 // App
 import DashboardPage from '@/pages/app/DashboardPage'
@@ -35,6 +36,7 @@ import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage'
 import TermsOfServicePage from '@/pages/TermsOfServicePage'
 import CookiePolicyPage from '@/pages/CookiePolicyPage'
 import FeaturesPage from '@/pages/FeaturesPage'
+import PricingPage from '@/pages/PricingPage'
 import SystemStatusPage from '@/pages/SystemStatusPage'
 import AffiliatesPage from '@/pages/AffiliatesPage'
 
@@ -67,13 +69,34 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     </div>
   )
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />
+  // Anyone signed in but not yet onboarded gets pushed through onboarding,
+  // unless they're already on it.
+  if (!user.onboardingCompleted && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />
+  }
+  return <>{children}</>
+}
+
+function RequireOnboarding({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <span className="label text-phantom-lime">Loading...</span>
+    </div>
+  )
+  if (!user) return <Navigate to="/login" replace />
+  // If they've already onboarded, route them away from this page.
+  if (user.onboardingCompleted) return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
 
 function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return null
-  if (user) return <Navigate to="/dashboard" replace />
+  if (user) {
+    // Send straight into onboarding if they haven't done it yet.
+    return <Navigate to={user.onboardingCompleted ? '/dashboard' : '/onboarding'} replace />
+  }
   return <>{children}</>
 }
 
@@ -86,6 +109,10 @@ const AppRoutes = memo(() => (
     } />
     <Route path="/signup" element={
       <RedirectIfAuthed><AuthPage mode="signup" /></RedirectIfAuthed>
+    } />
+
+    <Route path="/onboarding" element={
+      <RequireOnboarding><OnboardingPage /></RequireOnboarding>
     } />
 
     <Route path="/dashboard" element={
@@ -120,6 +147,7 @@ const AppRoutes = memo(() => (
 
     <Route path="/blog" element={<BlogPage />} />
     <Route path="/features" element={<FeaturesPage />} />
+    <Route path="/pricing" element={<PricingPage />} />
     <Route path="/status" element={<SystemStatusPage />} />
     <Route path="/affiliates" element={<AffiliatesPage />} />
     <Route path="/refund-policy" element={<RefundPolicyPage />} />

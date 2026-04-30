@@ -1,7 +1,7 @@
 import * as admin from 'firebase-admin'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { RESEND_API_KEY, sendMail } from '../lib/mailer'
-import { ANTHROPIC_API_KEY, generateJSON } from '../lib/anthropic'
+import { generateJSON } from '../lib/anthropic'
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -53,7 +53,7 @@ export const inactivityNudge = onSchedule(
  * the variable to test next, conversions remaining to phase up.
  */
 export const generateDailyBriefs = onSchedule(
-  { schedule: 'every day 08:00', timeZone: 'UTC', region: 'us-central1', secrets: [ANTHROPIC_API_KEY] },
+  { schedule: 'every day 08:00', timeZone: 'UTC', region: 'us-central1' },
   async () => {
     const db = admin.firestore()
     const projects = await db.collection('projects').where('status', '==', 'active').limit(500).get()

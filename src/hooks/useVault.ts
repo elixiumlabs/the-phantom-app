@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore'
 import { useAuth } from '@/contexts/AuthContext'
 import { db, isFirebaseConfigured } from '@/lib/firebase'
-import type { ProofVaultItem } from './types'
+import type { ProofVaultItem } from '@/contexts/ProjectContext'
 
 interface VaultResult {
   items: ProofVaultItem[]

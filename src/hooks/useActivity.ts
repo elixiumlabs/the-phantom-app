@@ -2,7 +2,16 @@ import { useEffect, useState } from 'react'
 import { collection, limit, onSnapshot, orderBy, query, where, type DocumentData } from 'firebase/firestore'
 import { useAuth } from '@/contexts/AuthContext'
 import { db, isFirebaseConfigured } from '@/lib/firebase'
-import type { ActivityEntry } from './types'
+import type { Timestamp } from 'firebase/firestore'
+
+export interface ActivityEntry {
+  id: string
+  user_id: string
+  project_id: string | null
+  action: string
+  metadata: Record<string, unknown>
+  created_at: Timestamp | null
+}
 
 interface ActivityResult {
   entries: ActivityEntry[]

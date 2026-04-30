@@ -90,10 +90,12 @@ const AuthPage = memo(({ mode }: AuthPageProps) => {
       if (mode === 'signup') {
         if (!name.trim()) { setError('Name is required.'); setLoading(false); return }
         await signup(name.trim(), email.trim(), password)
-        navigate('/dashboard')
+        // RequireAuth will route to /onboarding if onboarding_completed is false.
+        navigate('/dashboard', { replace: true })
       } else {
         await login(email.trim(), password)
-        navigate('/dashboard')
+        // RequireAuth will route to /onboarding if onboarding_completed is false.
+        navigate('/dashboard', { replace: true })
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong.')
@@ -243,7 +245,8 @@ const AuthPage = memo(({ mode }: AuthPageProps) => {
                 setLoading(true)
                 try {
                   await loginWithGoogle()
-                  navigate('/dashboard')
+                  // RequireAuth will route to /onboarding if onboarding_completed is false.
+        navigate('/dashboard', { replace: true })
                 } catch (err) {
                   setError(err instanceof Error ? err.message : 'Google sign-in failed.')
                 } finally {

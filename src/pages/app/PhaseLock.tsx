@@ -1,154 +1,155 @@
-import { memo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Plus, Trash2, Download } from 'lucide-react'
+import { Loader, Download, Sparkles, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useBrands, type ProofType } from '@/contexts/BrandContext'
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import { useProjects } from '@/contexts/ProjectContext'
+import { useVault } from '@/hooks'
+import {
+  positioningFromData,
+  recommendBrandIdentity,
+  buildNotFor,
+  structureTestimonial,
+  curateProofPackage,
+  exportLockInPdf,
+  completePhase,
+} from '@/lib/functions'
+import GeneratorPanel from '@/components/app/GeneratorPanel'
 
-/* ─── Proof item forms ─── */
-interface ResultForm { metric: string; context: string; date: string }
-interface TestimonialForm { quote: string; attribution: string; dateCollected: string }
-interface CaseStudyForm { beforeState: string; whatWasDone: string; afterState: string; timeline: string }
-
-const LOCK_ITEMS = [
-  'The offer has converted consistently across a minimum of 5 unrelated buyers from different channels',
-  'The positioning can be stated in one sentence and understood by someone who has never heard of you',
-  'You have a minimum of 3 pieces of proof that a skeptical stranger would find credible',
-  'Your objection list has been reduced to predictable objections with prepared responses',
-  'The brand identity reflects the validated positioning, not the aspirational one',
-  'You can describe who this is NOT for as specifically as who it IS for',
-]
+const VISUAL_DIRECTIONS = ['minimal', 'editorial', 'bold', 'warm', 'technical', 'other']
 
 const PhaseLock = memo(() => {
   const { id } = useParams()
-  const { getBrand, updateBrand, getBrandProof, addProofItem, deleteProofItem } = useBrands()
-  const brand = getBrand(id!)
-  const proof = getBrandProof(id!)
+  const projectId = id!
+  const { currentProject, lockIn } = useProjects()
+  const { items: vaultItems } = useVault(projectId)
 
-  const p4 = (brand?.phase4Data ?? {}) as Record<string, unknown>
+  const liRef = doc(db, 'projects', projectId, 'lock_in', 'main')
 
-  /* Positioning Lock */
-  const [buyerProblem, setBuyerProblem] = useState((p4.buyerProblem as string) ?? '')
-  const [buyerOutcome, setBuyerOutcome] = useState((p4.buyerOutcome as string) ?? '')
-  const [buyerFailed, setBuyerFailed] = useState((p4.buyerFailed as string) ?? '')
+  // Buyer language (Phase 04 §1)
+  const [buyerProblem, setBuyerProblem] = useState('')
+  const [buyerOutcome, setBuyerOutcome] = useState('')
+  const [buyerPrior, setBuyerPrior] = useState('')
 
-  /* Brand Identity */
-  const [finalName, setFinalName] = useState((p4.finalName as string) ?? '')
-  const [finalPositioning, setFinalPositioning] = useState((p4.finalPositioning as string) ?? '')
-  const [voiceTone, setVoiceTone] = useState((p4.voiceTone as string) ?? '')
-  const [primaryAudience, setPrimaryAudience] = useState((p4.primaryAudience as string) ?? '')
-  const [antiPositioning, setAntiPositioning] = useState((p4.antiPositioning as string) ?? '')
+  // Brand identity (§2)
+  const [finalBrandName, setFinalBrandName] = useState('')
+  const [generatedPositioning, setGeneratedPositioning] = useState('')
+  const [visualDirection, setVisualDirection] = useState('')
+  const [voiceAdjectives, setVoiceAdjectives] = useState('')
+  const [notFor, setNotFor] = useState('')
 
-  /* Proof forms */
-  const [showResultForm, setShowResultForm] = useState(false)
-  const [resultForm, setResultForm] = useState<ResultForm>({ metric: '', context: '', date: '' })
+  // Testimonial structurer input
+  const [rawTestimonial, setRawTestimonial] = useState('')
+  const [testimonialSource, setTestimonialSource] = useState('')
 
-  const [showTestimonialForm, setShowTestimonialForm] = useState(false)
-  const [testimonialForm, setTestimonialForm] = useState<TestimonialForm>({
-    quote: '', attribution: '', dateCollected: '',
-  })
+  // Export state
+  const [exporting, setExporting] = useState(false)
+  const [exportResult, setExportResult] = useState<{ url?: string; html?: string } | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
 
-  const [showCaseStudyForm, setShowCaseStudyForm] = useState(false)
-  const [caseStudyForm, setCaseStudyForm] = useState<CaseStudyForm>({
-    beforeState: '', whatWasDone: '', afterState: '', timeline: '',
-  })
+  const [completing, setCompleting] = useState(false)
+  const [completionError, setCompletionError] = useState<string | null>(null)
 
-  /* Lock-in checklist — manual */
-  const stored = (p4.checklist as boolean[]) ?? Array(6).fill(false)
-  const [checklist, setChecklist] = useState<boolean[]>(stored)
+  useEffect(() => {
+    if (!lockIn) return
+    setBuyerProblem(lockIn.buyer_problem_language ?? '')
+    setBuyerOutcome(lockIn.buyer_outcome_language ?? '')
+    setBuyerPrior(lockIn.buyer_prior_attempts ?? '')
+    setFinalBrandName(lockIn.final_brand_name ?? '')
+    setGeneratedPositioning(lockIn.generated_positioning ?? '')
+    setVisualDirection(lockIn.visual_direction ?? '')
+    setVoiceAdjectives((lockIn.final_voice_adjectives ?? []).join(', '))
+    setNotFor(lockIn.not_for ?? '')
+  }, [lockIn])
 
-  const toggleCheck = (i: number) => {
-    const next = [...checklist]
-    next[i] = !next[i]
-    setChecklist(next)
-    updateBrand(id!, { phase4Data: { ...p4, checklist: next } })
+  if (!currentProject || !lockIn) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader className="animate-spin text-phantom-lime" size={24} />
+      </div>
+    )
   }
 
-  const allChecked = checklist.every(Boolean)
-
-  /* Save positioning + brand identity */
-  const savePositioning = () => {
-    updateBrand(id!, {
-      phase4Data: { ...p4, buyerProblem, buyerOutcome, buyerFailed },
-    })
-  }
-
-  const saveBrandIdentity = () => {
-    updateBrand(id!, {
-      phase4Data: { ...p4, finalName, finalPositioning, voiceTone, primaryAudience, antiPositioning },
-    })
-  }
-
-  /* Add proof items */
-  const addResult = () => {
-    if (!resultForm.metric.trim()) return
-    addProofItem({
-      brandId: id!,
-      type: 'result',
-      content: { ...resultForm },
-      phaseCollected: 'lock',
-    })
-    setResultForm({ metric: '', context: '', date: '' })
-    setShowResultForm(false)
-  }
-
-  const addTestimonial = () => {
-    if (!testimonialForm.quote.trim()) return
-    addProofItem({
-      brandId: id!,
-      type: 'testimonial',
-      content: { ...testimonialForm },
-      phaseCollected: 'lock',
-    })
-    setTestimonialForm({ quote: '', attribution: '', dateCollected: '' })
-    setShowTestimonialForm(false)
-  }
-
-  const addCaseStudy = () => {
-    if (!caseStudyForm.beforeState.trim()) return
-    addProofItem({
-      brandId: id!,
-      type: 'case_study',
-      content: { ...caseStudyForm },
-      phaseCollected: 'lock',
-    })
-    setCaseStudyForm({ beforeState: '', whatWasDone: '', afterState: '', timeline: '' })
-    setShowCaseStudyForm(false)
-  }
-
-  const proofByType = (t: ProofType) => proof.filter(p => p.type === t)
-
-  const exportBrandKit = () => {
-    const data = {
-      brand: brand?.name,
-      positioning: {
-        before: buyerProblem,
-        after: buyerOutcome,
-        differentiation: buyerFailed,
+  // ----- Direct writes -----
+  const saveBuyerLanguage = async () => {
+    await setDoc(
+      liRef,
+      {
+        buyer_problem_language: buyerProblem,
+        buyer_outcome_language: buyerOutcome,
+        buyer_prior_attempts: buyerPrior,
+        updated_at: serverTimestamp(),
       },
-      identity: {
-        finalName,
-        finalPositioning,
-        voiceTone,
-        primaryAudience,
-        antiPositioning,
+      { merge: true },
+    )
+  }
+
+  const saveBrandIdentity = async () => {
+    await setDoc(
+      liRef,
+      {
+        final_brand_name: finalBrandName,
+        generated_positioning: generatedPositioning,
+        visual_direction: visualDirection || null,
+        final_voice_adjectives: voiceAdjectives
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        not_for: notFor,
+        'checklist.one_sentence_positioning': generatedPositioning.trim().length > 0,
+        'checklist.brand_from_data': !!visualDirection,
+        'checklist.not_for_defined': notFor.trim().length > 0,
+        updated_at: serverTimestamp(),
       },
-      proof: {
-        results: proofByType('result').map(p => p.content),
-        testimonials: proofByType('testimonial').map(p => p.content),
-        caseStudies: proofByType('case_study').map(p => p.content),
-      },
+      { merge: true },
+    )
+  }
+
+  const handleExport = async () => {
+    setExporting(true)
+    setExportError(null)
+    setExportResult(null)
+    try {
+      const out = await exportLockInPdf({ project_id: projectId })
+      if ('url' in out) setExportResult({ url: out.url })
+      else setExportResult({ html: out.html })
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed.')
+    } finally {
+      setExporting(false)
     }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${brand?.name ?? 'brand'}-kit.json`
-    a.click()
-    URL.revokeObjectURL(url)
-    updateBrand(id!, { currentPhase: 'complete' })
   }
 
-  if (!brand) return null
+  const handleCompletePhase = async () => {
+    setCompleting(true)
+    setCompletionError(null)
+    try {
+      await completePhase({ project_id: projectId, phase: 4 })
+    } catch (err) {
+      setCompletionError(err instanceof Error ? err.message : 'Could not complete phase.')
+      setCompleting(false)
+    }
+  }
+
+  // ----- Lock-in checklist -----
+  const checklist = lockIn.checklist || {}
+  const conversionsCount = vaultItems.filter((v) =>
+    ['testimonial', 'case_study', 'revenue', 'conversion_data'].includes(v.proof_type),
+  ).length
+
+  const fiveConversionsMet = conversionsCount >= 5
+  const threeProofMet = vaultItems.length >= 3
+
+  const allChecked =
+    fiveConversionsMet &&
+    !!checklist.one_sentence_positioning &&
+    threeProofMet &&
+    !!checklist.objections_mapped &&
+    !!checklist.brand_from_data &&
+    !!checklist.not_for_defined
+
+  const readyToSurface = currentProject.ready_to_surface
 
   return (
     <motion.div
@@ -161,353 +162,553 @@ const PhaseLock = memo(() => {
       <div className="mb-8">
         <p className="label text-phantom-lime mb-2">Phase 04 — Lock In</p>
         <h1 className="font-display font-bold text-[32px] text-phantom-text-primary mb-3">
-          Build the brand. For real this time.
+          Build the brand from the data.
         </h1>
         <p className="font-body text-[16px] text-phantom-text-secondary">
-          The offer works. The messaging is validated. Now the brand identity earns the right to exist.
+          Now that the offer works, lock in the positioning, the identity, and the proof package — built from validated buyer language, not preference.
         </p>
       </div>
 
-      {/* Section 1 — Positioning Lock */}
-      <div className="card mb-6">
-        <p className="label mb-2">Lock Your Positioning From Data</p>
-        <p className="font-body text-[13px] text-phantom-text-muted mb-5">
-          This comes from your buyers. Not from what you hoped they would say.
-        </p>
-
-        <div className="space-y-4 mb-5">
-          <div>
-            <label className="label text-phantom-text-secondary mb-2 block">
-              How did buyers describe the problem when they first came to you?
-            </label>
-            <p className="font-body text-[11px] text-phantom-text-muted mb-2">Use their exact words</p>
-            <textarea
-              className="input"
-              rows={2}
-              value={buyerProblem}
-              onChange={e => setBuyerProblem(e.target.value)}
-              placeholder='"I was spending 10 hours a week on X and still not seeing Y..."'
-            />
-          </div>
-          <div>
-            <label className="label text-phantom-text-secondary mb-2 block">
-              How did buyers describe the outcome they received?
-            </label>
-            <p className="font-body text-[11px] text-phantom-text-muted mb-2">Use their exact words</p>
-            <textarea
-              className="input"
-              rows={2}
-              value={buyerOutcome}
-              onChange={e => setBuyerOutcome(e.target.value)}
-              placeholder='"Now I can X in Y time and my Z has doubled..."'
-            />
-          </div>
-          <div>
-            <label className="label text-phantom-text-secondary mb-2 block">
-              What had they tried before that didn't work?
-            </label>
-            <textarea
-              className="input"
-              rows={2}
-              value={buyerFailed}
-              onChange={e => setBuyerFailed(e.target.value)}
-              placeholder="The alternatives that failed them before finding you"
-            />
-          </div>
-        </div>
-
-        {(buyerProblem || buyerOutcome || buyerFailed) && (
-          <div className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-4 mb-5 space-y-3">
-            {buyerProblem && (
-              <div>
-                <p className="label text-phantom-text-muted text-[10px] mb-1">BEFORE</p>
-                <p className="font-body text-[13px] text-phantom-text-primary">{buyerProblem}</p>
-              </div>
-            )}
-            {buyerOutcome && (
-              <div>
-                <p className="label text-phantom-lime text-[10px] mb-1">AFTER</p>
-                <p className="font-body text-[13px] text-phantom-text-primary">{buyerOutcome}</p>
-              </div>
-            )}
-            {buyerFailed && (
-              <div>
-                <p className="label text-phantom-text-muted text-[10px] mb-1">DIFFERENTIATION</p>
-                <p className="font-body text-[13px] text-phantom-text-primary">{buyerFailed}</p>
-              </div>
-            )}
-            <p className="font-body text-[11px] text-phantom-lime mt-2">This is your positioning. Use it verbatim.</p>
-          </div>
-        )}
-
-        <button className="btn-secondary" onClick={savePositioning}>Save positioning</button>
-      </div>
-
-      {/* Section 2 — Brand Identity Builder */}
-      <div className="card mb-6">
-        <p className="label mb-2">Build the Real Brand</p>
-        <p className="font-body text-[13px] text-phantom-text-muted mb-5">
-          Now the name matters. Now the visual identity matters. Because now you know what you are building and for whom.
-        </p>
-
-        <div className="space-y-4 mb-5">
-          {[
-            { label: 'Final brand name', val: finalName, set: setFinalName, ph: 'The name this will go to market as' },
-            { label: 'Final one-sentence positioning', val: finalPositioning, set: setFinalPositioning, ph: 'What it is, who it is for, what it produces' },
-            { label: 'What this brand is NOT for (anti-positioning)', val: antiPositioning, set: setAntiPositioning, ph: 'Describe specifically who this is not for' },
-            { label: 'Primary audience (from validated data)', val: primaryAudience, set: setPrimaryAudience, ph: 'Based on who actually bought, not who you imagined would' },
-          ].map(({ label, val, set, ph }) => (
-            <div key={label}>
-              <label className="label text-phantom-text-secondary mb-2 block">{label}</label>
-              <input className="input" value={val} onChange={e => set(e.target.value)} placeholder={ph} />
-            </div>
-          ))}
-          <div>
-            <label className="label text-phantom-text-secondary mb-2 block">Voice and tone</label>
-            <textarea
-              className="input"
-              rows={2}
-              value={voiceTone}
-              onChange={e => setVoiceTone(e.target.value)}
-              placeholder="How the brand communicates — the personality in the writing"
-            />
-          </div>
-        </div>
-
-        <button className="btn-secondary" onClick={saveBrandIdentity}>Save brand identity</button>
-      </div>
-
-      {/* Section 3 — Proof Package */}
-      <div className="card mb-6">
-        <p className="label mb-2">Proof Package</p>
-        <p className="font-body text-[13px] text-phantom-text-muted mb-6">Assemble before going public.</p>
-
-        {/* Results */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <p className="font-body text-[14px] text-phantom-text-primary">Results</p>
-            <button className="btn-ghost text-[12px] py-1 px-2 gap-1" onClick={() => setShowResultForm(v => !v)}>
-              <Plus size={12} /> Add result
-            </button>
-          </div>
-
-          <AnimatePresence>
-            {showResultForm && (
-              <motion.div
-                className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-4 mb-3"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <div className="space-y-3">
-                  <input className="input text-[13px] py-2" value={resultForm.metric} onChange={e => setResultForm(f => ({ ...f, metric: e.target.value }))} placeholder="The metric (e.g. 3x revenue increase, 40% time saved)" />
-                  <input className="input text-[13px] py-2" value={resultForm.context} onChange={e => setResultForm(f => ({ ...f, context: e.target.value }))} placeholder="Context (who, what situation)" />
-                  <input className="input text-[13px] py-2" value={resultForm.date} onChange={e => setResultForm(f => ({ ...f, date: e.target.value }))} placeholder="Date" />
-                  <div className="flex gap-2">
-                    <button className="btn-primary text-[13px] py-2" onClick={addResult} disabled={!resultForm.metric.trim()}>Save result</button>
-                    <button className="btn-ghost text-[13px]" onClick={() => setShowResultForm(false)}>Cancel</button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="space-y-2">
-            {proofByType('result').map(item => (
-              <div key={item.id} className="flex items-start gap-3 bg-[#0d0d0d] border border-phantom-border-subtle rounded p-3">
-                <div className="flex-1">
-                  <p className="font-code font-bold text-[15px] text-phantom-lime">{item.content.metric}</p>
-                  {item.content.context && <p className="font-body text-[12px] text-phantom-text-muted mt-0.5">{item.content.context}</p>}
-                </div>
-                <button onClick={() => deleteProofItem(item.id)} className="text-phantom-text-muted hover:text-phantom-danger transition-colors shrink-0">
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Testimonials */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <p className="font-body text-[14px] text-phantom-text-primary">Testimonials</p>
-            <button className="btn-ghost text-[12px] py-1 px-2 gap-1" onClick={() => setShowTestimonialForm(v => !v)}>
-              <Plus size={12} /> Add testimonial
-            </button>
-          </div>
-
-          <AnimatePresence>
-            {showTestimonialForm && (
-              <motion.div
-                className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-4 mb-3"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <div className="space-y-3">
-                  <textarea className="input text-[13px] py-2 min-h-[80px]" value={testimonialForm.quote} onChange={e => setTestimonialForm(f => ({ ...f, quote: e.target.value }))} placeholder="Quote in their exact words" />
-                  <input className="input text-[13px] py-2" value={testimonialForm.attribution} onChange={e => setTestimonialForm(f => ({ ...f, attribution: e.target.value }))} placeholder="Attribution (name, title, company)" />
-                  <input className="input text-[13px] py-2" value={testimonialForm.dateCollected} onChange={e => setTestimonialForm(f => ({ ...f, dateCollected: e.target.value }))} placeholder="Date collected" />
-                  <div className="flex gap-2">
-                    <button className="btn-primary text-[13px] py-2" onClick={addTestimonial} disabled={!testimonialForm.quote.trim()}>Save testimonial</button>
-                    <button className="btn-ghost text-[13px]" onClick={() => setShowTestimonialForm(false)}>Cancel</button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="space-y-3">
-            {proofByType('testimonial').map(item => (
-              <div key={item.id} className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-4 relative">
-                <p className="font-display text-[32px] text-phantom-lime opacity-30 leading-none mb-2">"</p>
-                <p className="font-body text-[14px] text-phantom-text-primary leading-relaxed mb-3">{item.content.quote}</p>
-                <p className="font-ui text-[11px] text-phantom-text-muted uppercase tracking-wider">{item.content.attribution}</p>
-                <button
-                  onClick={() => deleteProofItem(item.id)}
-                  className="absolute top-3 right-3 text-phantom-text-muted hover:text-phantom-danger transition-colors"
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Case Studies */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="font-body text-[14px] text-phantom-text-primary">Case Studies</p>
-            <button className="btn-ghost text-[12px] py-1 px-2 gap-1" onClick={() => setShowCaseStudyForm(v => !v)}>
-              <Plus size={12} /> Add case study
-            </button>
-          </div>
-
-          <AnimatePresence>
-            {showCaseStudyForm && (
-              <motion.div
-                className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-4 mb-3"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <div className="space-y-3">
-                  <textarea className="input text-[13px] py-2 min-h-[60px]" value={caseStudyForm.beforeState} onChange={e => setCaseStudyForm(f => ({ ...f, beforeState: e.target.value }))} placeholder="Before state — what was their situation" />
-                  <textarea className="input text-[13px] py-2 min-h-[60px]" value={caseStudyForm.whatWasDone} onChange={e => setCaseStudyForm(f => ({ ...f, whatWasDone: e.target.value }))} placeholder="What was done — what you worked on together" />
-                  <textarea className="input text-[13px] py-2 min-h-[60px]" value={caseStudyForm.afterState} onChange={e => setCaseStudyForm(f => ({ ...f, afterState: e.target.value }))} placeholder="After state — specific measurable result" />
-                  <input className="input text-[13px] py-2" value={caseStudyForm.timeline} onChange={e => setCaseStudyForm(f => ({ ...f, timeline: e.target.value }))} placeholder="Timeline (e.g. 6 weeks, 3 months)" />
-                  <div className="flex gap-2">
-                    <button className="btn-primary text-[13px] py-2" onClick={addCaseStudy} disabled={!caseStudyForm.beforeState.trim()}>Save case study</button>
-                    <button className="btn-ghost text-[13px]" onClick={() => setShowCaseStudyForm(false)}>Cancel</button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="space-y-3">
-            {proofByType('case_study').map(item => (
-              <div key={item.id} className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-4 relative">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="font-body text-[10px] text-phantom-text-muted uppercase tracking-wider mb-1">Before</p>
-                    <p className="font-body text-[13px] text-phantom-text-secondary">{item.content.beforeState}</p>
-                  </div>
-                  <div>
-                    <p className="font-body text-[10px] text-phantom-lime uppercase tracking-wider mb-1">After</p>
-                    <p className="font-body text-[13px] text-phantom-text-primary">{item.content.afterState}</p>
-                  </div>
-                </div>
-                {item.content.timeline && (
-                  <p className="font-body text-[11px] text-phantom-text-muted mt-2">Timeline: {item.content.timeline}</p>
-                )}
-                <button
-                  onClick={() => deleteProofItem(item.id)}
-                  className="absolute top-3 right-3 text-phantom-text-muted hover:text-phantom-danger transition-colors"
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Section 4 — Lock-In Checklist */}
-      <div className={`card transition-all duration-500 ${allChecked ? 'border-phantom-lime' : 'border-phantom-border'}`}>
-        <p className="label text-phantom-lime mb-2">The Lock-In Checklist</p>
-        <p className="font-body text-[13px] text-phantom-text-muted mb-6">
-          Every item must be checked before this brand goes public. This is a hard gate.
-        </p>
-
-        <div className="space-y-3 mb-5">
-          {LOCK_ITEMS.map((item, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-3 cursor-pointer group"
-              onClick={() => toggleCheck(i)}
-            >
-              <div
-                className={`w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
-                  checklist[i]
-                    ? 'bg-phantom-lime border-phantom-lime'
-                    : 'border-phantom-border group-hover:border-[#444]'
-                }`}
-              >
-                {checklist[i] && (
-                  <span className="text-phantom-black text-[11px] font-bold">✓</span>
-                )}
-              </div>
-              <span
-                className={`font-body text-[14px] leading-snug transition-colors duration-150 ${
-                  checklist[i] ? 'text-phantom-text-primary' : 'text-phantom-text-muted'
-                }`}
-              >
-                {item}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <p className="font-body text-[13px] text-phantom-text-muted mb-5">
-          {checklist.filter(Boolean).length} of {LOCK_ITEMS.length} complete
-        </p>
-
-        <AnimatePresence>
-          {allChecked && (
-            <motion.div
-              className="bg-[#0a1900] border border-phantom-lime rounded p-5 mb-5 text-center"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.25 }}
-            >
-              <p className="label text-phantom-lime mb-1">Phantom Phase Complete</p>
-              <p className="font-body text-[14px] text-phantom-text-secondary">
-                You built it invisible. Now launch it inevitable.
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <button
-          className="btn-primary w-full gap-2"
-          disabled={!allChecked}
-          onClick={exportBrandKit}
-          title={!allChecked ? 'Complete all checklist items before going public' : ''}
+      {/* Ready to surface banner */}
+      {readyToSurface && (
+        <motion.div
+          className="mb-6 bg-phantom-lime text-phantom-black rounded-xl p-5"
+          initial={{ scale: 0.96, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
         >
-          <Download size={15} />
-          Export brand kit + go public
+          <p className="font-display font-bold text-[20px] mb-1">PHANTOM PHASE COMPLETE.</p>
+          <p className="font-body text-[14px]">You have proof. Now you go visible.</p>
+        </motion.div>
+      )}
+
+      {/* Section 1 — Buyer language */}
+      <div className="card mb-6">
+        <p className="label mb-2">Lock in positioning from buyer language</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
+          Paste the actual words your buyers used. Not your interpretation. The positioning generator turns these into a one-sentence statement.
+        </p>
+
+        <div className="space-y-4 mb-4">
+          <div>
+            <label className="label text-phantom-text-secondary mb-2 block">
+              How buyers described the problem before finding you
+            </label>
+            <textarea
+              className="input min-h-[88px]"
+              value={buyerProblem}
+              onChange={(e) => setBuyerProblem(e.target.value)}
+              placeholder="Their words, verbatim where possible."
+            />
+          </div>
+          <div>
+            <label className="label text-phantom-text-secondary mb-2 block">
+              Words buyers used to describe the outcome they got
+            </label>
+            <textarea
+              className="input min-h-[88px]"
+              value={buyerOutcome}
+              onChange={(e) => setBuyerOutcome(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label text-phantom-text-secondary mb-2 block">
+              What they had tried before that did not work
+            </label>
+            <textarea
+              className="input min-h-[88px]"
+              value={buyerPrior}
+              onChange={(e) => setBuyerPrior(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <button className="btn-secondary mb-5" onClick={saveBuyerLanguage}>
+          Save buyer language
         </button>
 
-        {!allChecked && (
-          <p className="font-body text-[12px] text-phantom-text-muted text-center mt-2">
-            Complete all checklist items before going public.
-          </p>
+        <GeneratorPanel
+          title="Generate positioning from data"
+          description="Takes the three buyer-language inputs above and synthesizes a one-sentence positioning statement built from their words."
+          requiredPlan="phantom_pro"
+          disabled={!buyerProblem.trim() || !buyerOutcome.trim()}
+          disabledReason="Add buyer problem and outcome language first."
+          cta="Generate positioning"
+          run={() => positioningFromData({ project_id: projectId })}
+          renderResult={(out) => (
+            <div className="space-y-3">
+              <div className="bg-phantom-lime/5 border border-phantom-lime/30 rounded p-4">
+                <p className="label text-phantom-lime mb-2">Positioning</p>
+                <p className="font-body text-[16px] text-phantom-text-primary leading-relaxed mb-3">
+                  {out.positioning}
+                </p>
+                <button
+                  className="btn-secondary text-[12px] py-1.5 px-3"
+                  onClick={() => {
+                    setGeneratedPositioning(out.positioning)
+                  }}
+                >
+                  Use this positioning
+                </button>
+              </div>
+              <p className="font-body text-[12px] text-phantom-text-muted italic">{out.reasoning}</p>
+              {out.buyer_phrases_used.length > 0 && (
+                <div>
+                  <p className="label text-phantom-lime mb-2">Buyer phrases used</p>
+                  <div className="flex flex-wrap gap-2">
+                    {out.buyer_phrases_used.map((p, i) => (
+                      <span key={i} className="badge text-[11px] px-2 py-1 bg-phantom-black/40 border border-phantom-border-subtle rounded">{p}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {out.what_was_left_out.length > 0 && (
+                <div>
+                  <p className="label text-phantom-warning mb-2">Left out (worth reviewing)</p>
+                  <ul className="space-y-1">
+                    {out.what_was_left_out.map((p, i) => (
+                      <li key={i} className="font-body text-[12px] text-phantom-text-secondary">— {p}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        />
+      </div>
+
+      {/* Section 2 — Brand identity */}
+      <div className="card mb-6">
+        <p className="label mb-2">Brand identity decisions</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
+          Now the name matters. Now the identity matters. The recommender pulls from your validated positioning and voice.
+        </p>
+
+        <div className="space-y-4 mb-5">
+          <div>
+            <label className="label text-phantom-text-secondary mb-2 block">Final brand name</label>
+            <input
+              className="input"
+              value={finalBrandName}
+              onChange={(e) => setFinalBrandName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label text-phantom-text-secondary mb-2 block">One-sentence positioning</label>
+            <input
+              className="input"
+              value={generatedPositioning}
+              onChange={(e) => setGeneratedPositioning(e.target.value)}
+              placeholder="Generate from buyer language above, or write directly."
+            />
+          </div>
+          <div>
+            <label className="label text-phantom-text-secondary mb-2 block">Visual direction</label>
+            <select
+              className="input"
+              value={visualDirection}
+              onChange={(e) => setVisualDirection(e.target.value)}
+            >
+              <option value="">Select...</option>
+              {VISUAL_DIRECTIONS.map((v) => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label text-phantom-text-secondary mb-2 block">Voice adjectives (comma-separated)</label>
+            <input
+              className="input"
+              value={voiceAdjectives}
+              onChange={(e) => setVoiceAdjectives(e.target.value)}
+              placeholder="e.g. direct, technical, no-nonsense"
+            />
+          </div>
+          <div>
+            <label className="label text-phantom-text-secondary mb-2 block">Who this is NOT for</label>
+            <textarea
+              className="input min-h-[80px]"
+              value={notFor}
+              onChange={(e) => setNotFor(e.target.value)}
+              placeholder="As specific as who it IS for."
+            />
+          </div>
+        </div>
+
+        <button className="btn-secondary mb-5" onClick={saveBrandIdentity}>
+          Save brand identity
+        </button>
+
+        <GeneratorPanel
+          title="Recommend brand identity"
+          description="Returns a visual direction recommendation, color/type mood, voice pillars, and the one thing to avoid — all derived from your validated positioning."
+          requiredPlan="phantom_pro"
+          cta="Recommend identity"
+          run={() => recommendBrandIdentity({ project_id: projectId })}
+          renderResult={(out) => (
+            <div className="space-y-3">
+              <div className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                <p className="label text-phantom-lime mb-1">Visual direction</p>
+                <p className="font-body text-[14px] text-phantom-text-primary mb-1">{out.visual_direction}</p>
+                <p className="font-body text-[12px] text-phantom-text-muted">{out.visual_reasoning}</p>
+                <button
+                  className="btn-secondary text-[12px] py-1 px-3 mt-2"
+                  onClick={() => setVisualDirection(out.visual_direction)}
+                >
+                  Apply
+                </button>
+              </div>
+              <div className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                <p className="label text-phantom-lime mb-1">Color mood</p>
+                <p className="font-body text-[13px] text-phantom-text-primary mb-1">{out.color_mood.primary_feel}</p>
+                {out.color_mood.example_palette.length > 0 && (
+                  <div className="flex gap-1 mt-2">
+                    {out.color_mood.example_palette.map((c, i) => (
+                      <span key={i} className="font-code text-[11px] px-2 py-1 rounded bg-phantom-black border border-phantom-border-subtle text-phantom-text-secondary">{c}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                <p className="label text-phantom-lime mb-1">Voice pillars</p>
+                <ul className="space-y-1">
+                  {out.voice_pillars.map((v, i) => (
+                    <li key={i} className="font-body text-[13px] text-phantom-text-secondary">— {v}</li>
+                  ))}
+                </ul>
+                <button
+                  className="btn-secondary text-[12px] py-1 px-3 mt-2"
+                  onClick={() => setVoiceAdjectives(out.voice_pillars.slice(0, 3).join(', '))}
+                >
+                  Apply top 3
+                </button>
+              </div>
+              <div className="bg-phantom-danger/10 border border-phantom-danger/30 rounded p-3">
+                <p className="label text-phantom-danger mb-1">One thing to avoid</p>
+                <p className="font-body text-[13px] text-phantom-text-secondary">{out.one_thing_to_avoid}</p>
+              </div>
+            </div>
+          )}
+        />
+      </div>
+
+      {/* Section 3 — Not-for builder */}
+      <div className="card mb-6">
+        <p className="label mb-2">Who this is NOT for</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
+          Generate specific exclusions and the failure modes that follow if you serve them anyway.
+        </p>
+
+        <GeneratorPanel
+          title="Build the not-for list"
+          description="Returns a not-for paragraph, specific exclusions with reasoning, and what fails if you serve those people."
+          requiredPlan="phantom_pro"
+          cta="Build not-for"
+          run={() => buildNotFor({ project_id: projectId })}
+          renderResult={(out) => (
+            <div className="space-y-3">
+              <div className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                <p className="label text-phantom-lime mb-2">Not-for paragraph</p>
+                <p className="font-body text-[14px] text-phantom-text-primary mb-2 leading-relaxed">{out.not_for_paragraph}</p>
+                <button
+                  className="btn-secondary text-[12px] py-1 px-3"
+                  onClick={() => setNotFor(out.not_for_paragraph)}
+                >
+                  Use this
+                </button>
+              </div>
+              <div className="space-y-2">
+                <p className="label text-phantom-lime">Specific exclusions</p>
+                {out.exclusions.map((e, i) => (
+                  <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                    <p className="font-body text-[13px] text-phantom-text-primary font-medium">{e.exclusion}</p>
+                    <p className="font-body text-[12px] text-phantom-text-muted">{e.why}</p>
+                  </div>
+                ))}
+              </div>
+              {out.failure_modes_if_we_serve_them.length > 0 && (
+                <div className="bg-phantom-warning/10 border border-phantom-warning/30 rounded p-3">
+                  <p className="label text-phantom-warning mb-1">Failure modes if you serve them</p>
+                  <ul className="space-y-1">
+                    {out.failure_modes_if_we_serve_them.map((f, i) => (
+                      <li key={i} className="font-body text-[13px] text-phantom-text-secondary">— {f}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        />
+      </div>
+
+      {/* Section 4 — Testimonial structurer */}
+      <div className="card mb-6">
+        <p className="label mb-2">Structure a raw testimonial</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
+          Paste a raw quote. The structurer breaks it into buyer-language fields, flags missing pieces, and saves it to your vault.
+        </p>
+
+        <textarea
+          className="input min-h-[100px] mb-3"
+          value={rawTestimonial}
+          onChange={(e) => setRawTestimonial(e.target.value)}
+          placeholder="Paste the testimonial here. SMS, email, DM — whatever you have."
+        />
+        <input
+          className="input mb-4"
+          value={testimonialSource}
+          onChange={(e) => setTestimonialSource(e.target.value)}
+          placeholder="Source (e.g. 'B2 — Slack DM, 2025-12-04')"
+        />
+
+        <GeneratorPanel
+          title="Structure testimonial"
+          description="Splits the raw quote into problem-language, outcome-language, measurable result, and missing pieces. Auto-saves to vault."
+          disabled={rawTestimonial.trim().length < 20}
+          disabledReason="Paste a testimonial above first."
+          cta="Structure it"
+          run={() =>
+            structureTestimonial({
+              raw_text: rawTestimonial,
+              source_note: testimonialSource || undefined,
+              project_id: projectId,
+              save_to_vault: true,
+            })
+          }
+          renderResult={(out) => (
+            <div className="space-y-3">
+              <div className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                <p className="label text-phantom-lime mb-1">Pull quote</p>
+                <p className="font-body text-[15px] text-phantom-text-primary italic leading-relaxed">"{out.pull_quote}"</p>
+              </div>
+              <div className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                <p className="label text-phantom-lime mb-1">Buyer problem language</p>
+                <p className="font-body text-[13px] text-phantom-text-secondary">{out.buyer_problem_language}</p>
+              </div>
+              <div className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                <p className="label text-phantom-lime mb-1">Buyer outcome language</p>
+                <p className="font-body text-[13px] text-phantom-text-secondary">{out.buyer_outcome_language}</p>
+              </div>
+              {out.measurable_result && (
+                <div className="bg-phantom-lime/5 border border-phantom-lime/30 rounded p-3">
+                  <p className="label text-phantom-lime mb-1">Measurable result</p>
+                  <p className="font-body text-[13px] text-phantom-text-primary">{out.measurable_result}</p>
+                </div>
+              )}
+              <div className={`rounded p-3 border ${
+                out.permission_flag === 'granted'
+                  ? 'bg-phantom-lime/5 border-phantom-lime/30'
+                  : 'bg-phantom-warning/10 border-phantom-warning/30'
+              }`}>
+                <p className="font-body text-[12px]">
+                  Permission to use: <span className={out.permission_flag === 'granted' ? 'text-phantom-lime' : 'text-phantom-warning'}>{out.permission_flag.replace(/_/g, ' ')}</span>
+                </p>
+              </div>
+              {out.missing_pieces.length > 0 && (
+                <div>
+                  <p className="label text-phantom-warning mb-1">Missing pieces</p>
+                  <ul className="space-y-1">
+                    {out.missing_pieces.map((m, i) => (
+                      <li key={i} className="font-body text-[12px] text-phantom-text-secondary">— {m}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {out.follow_up_questions.length > 0 && (
+                <div>
+                  <p className="label text-phantom-lime mb-1">Follow-up questions to ask the buyer</p>
+                  <ul className="space-y-1">
+                    {out.follow_up_questions.map((q, i) => (
+                      <li key={i} className="font-body text-[12px] text-phantom-text-secondary">— {q}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="font-body text-[11px] text-phantom-text-muted">Saved to your proof vault.</p>
+            </div>
+          )}
+        />
+      </div>
+
+      {/* Section 5 — Proof package curator */}
+      <div className="card mb-6">
+        <p className="label mb-2">Proof package</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
+          Picks the strongest proof items a skeptical stranger would believe. Saved as your project's proof_package.
+        </p>
+
+        <p className="font-body text-[13px] text-phantom-text-muted mb-4">
+          Currently in vault for this project: <span className="text-phantom-lime">{vaultItems.length}</span> items.
+        </p>
+
+        <GeneratorPanel
+          title="Curate proof package"
+          description="Selects the strongest 3+ proof pieces with skeptic scores and flags missing categories."
+          requiredPlan="phantom_pro"
+          disabled={vaultItems.length < 3}
+          disabledReason="Add at least 3 vault items first."
+          cta="Curate"
+          run={() => curateProofPackage({ project_id: projectId })}
+          renderResult={(out) => (
+            <div className="space-y-3">
+              <p className="font-body text-[14px] text-phantom-text-secondary">{out.recommendation}</p>
+              <div className="space-y-2">
+                {out.selected.map((s, i) => (
+                  <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                    <div className="flex items-start justify-between gap-3 mb-1">
+                      <p className="font-body text-[12px] text-phantom-text-muted uppercase tracking-wider">{s.proof_type}</p>
+                      <span className="font-code text-[12px] text-phantom-lime shrink-0">skeptic: {s.skeptic_score}/100</span>
+                    </div>
+                    <p className="font-body text-[13px] text-phantom-text-secondary">{s.why_it_belongs}</p>
+                  </div>
+                ))}
+              </div>
+              {out.missing_categories.length > 0 && (
+                <div className="bg-phantom-warning/10 border border-phantom-warning/30 rounded p-3">
+                  <p className="label text-phantom-warning mb-1">Missing categories</p>
+                  <p className="font-body text-[13px] text-phantom-text-secondary">{out.missing_categories.join(', ')}</p>
+                </div>
+              )}
+            </div>
+          )}
+        />
+      </div>
+
+      {/* Section 6 — Lock-in checklist */}
+      <div className={`card mb-6 transition-colors duration-300 ${allChecked ? 'border-phantom-lime' : 'border-phantom-border'}`}>
+        <p className="label text-phantom-lime mb-4">The lock-in checklist</p>
+
+        <div className="space-y-3 mb-4">
+          {[
+            {
+              label: `Offer converted across 5+ unrelated buyers (${conversionsCount} so far)`,
+              done: fiveConversionsMet,
+              note: 'Auto-tracked from your vault.',
+            },
+            {
+              label: 'Positioning stated in one sentence',
+              done: !!checklist.one_sentence_positioning,
+              note: 'Set automatically when you save brand identity above.',
+            },
+            {
+              label: `At least 3 pieces of credible proof (${vaultItems.length} so far)`,
+              done: threeProofMet,
+              note: 'Auto-tracked from your vault.',
+            },
+            {
+              label: 'Objection list reduced to predictable patterns',
+              done: !!checklist.objections_mapped,
+              note: 'Set when you build the objection library in Phase 02.',
+            },
+            {
+              label: 'Brand identity reflects validated positioning',
+              done: !!checklist.brand_from_data,
+              note: 'Set automatically when you pick a visual direction above.',
+            },
+            {
+              label: 'You can describe who this is NOT for',
+              done: !!checklist.not_for_defined,
+              note: 'Set automatically when you fill in the not-for field above.',
+            },
+          ].map(({ label, done, note }) => (
+            <div key={label} className="flex items-start gap-3">
+              <div
+                className={`w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                  done ? 'bg-phantom-lime border-phantom-lime' : 'border-phantom-border'
+                }`}
+              >
+                {done && <span className="text-phantom-black text-[11px] font-bold">✓</span>}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`font-body text-[14px] ${done ? 'text-phantom-text-primary' : 'text-phantom-text-muted'}`}>{label}</p>
+                <p className="font-body text-[11px] text-phantom-text-muted">{note}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {completionError && (
+          <div className="bg-phantom-danger/10 border border-phantom-danger/30 rounded p-3 mb-4 flex items-start gap-2">
+            <AlertTriangle size={14} className="text-phantom-danger mt-0.5 shrink-0" />
+            <p className="font-body text-[13px] text-phantom-danger">{completionError}</p>
+          </div>
+        )}
+
+        {!readyToSurface && (
+          <button className="btn-primary w-full" disabled={!allChecked || completing} onClick={handleCompletePhase}>
+            {completing ? (
+              <>
+                <Loader size={14} className="animate-spin" /> Locking in...
+              </>
+            ) : (
+              <>
+                <Sparkles size={14} /> Mark phase 4 complete
+              </>
+            )}
+          </button>
         )}
       </div>
+
+      {/* Export */}
+      {readyToSurface && (
+        <div className="card mb-6 border-phantom-lime">
+          <p className="label text-phantom-lime mb-2">Export brand lock-in guide</p>
+          <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
+            A branded PDF: positioning, validated offer, proof package, brand identity, iteration history, objections map.
+          </p>
+
+          <button className="btn-primary" disabled={exporting} onClick={handleExport}>
+            {exporting ? (
+              <>
+                <Loader size={14} className="animate-spin" /> Generating PDF...
+              </>
+            ) : (
+              <>
+                <Download size={14} /> Export PDF
+              </>
+            )}
+          </button>
+
+          <AnimatePresence>
+            {exportError && (
+              <motion.div
+                className="mt-3 bg-phantom-danger/10 border border-phantom-danger/30 rounded p-3"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <p className="font-body text-[13px] text-phantom-danger">{exportError}</p>
+              </motion.div>
+            )}
+            {exportResult?.url && (
+              <motion.div
+                className="mt-3 bg-phantom-lime/5 border border-phantom-lime/30 rounded p-3 flex items-center justify-between"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <p className="font-body text-[13px] text-phantom-text-primary">Your guide is ready.</p>
+                <a
+                  href={exportResult.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-secondary text-[12px] py-1.5 px-3 flex items-center gap-2"
+                >
+                  Download <Download size={12} />
+                </a>
+              </motion.div>
+            )}
+            {exportResult?.html && (
+              <motion.div
+                className="mt-3 bg-phantom-warning/10 border border-phantom-warning/30 rounded p-3"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <p className="font-body text-[13px] text-phantom-warning">
+                  PDF rendering is unavailable on this environment. The guide was generated as HTML — check your activity log for the saved snapshot.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </motion.div>
   )
 })
