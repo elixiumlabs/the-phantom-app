@@ -32,18 +32,53 @@ export const completeOnboarding = onCall(
     const db = admin.firestore()
     const userRef = db.doc(`users/${uid}`)
     const userSnap = await userRef.get()
-    if (!userSnap.exists) throw new HttpsError('failed-precondition', 'User doc not found')
-    if (userSnap.data()?.onboarding_completed) {
+    if (!userSnap.exists) {
+      // Self-heal: bootstrapUser onCreate trigger may not have run for accounts
+      // created before it was deployed. Create the doc inline so onboarding can proceed.
+      const authUser = await admin.auth().getUser(uid).catch(() => null)
+      const nowTs = admin.firestore.FieldValue.serverTimestamp()
+      await userRef.set({
+        email: authUser?.email ?? null,
+        full_name: authUser?.displayName ?? null,
+        avatar_url: authUser?.photoURL ?? null,
+        plan: 'free',
+        onboarding_completed: false,
+        stripe_customer_id: null,
+        stripe_subscription_id: null,
+        provider: authUser?.providerData[0]?.providerId ?? 'password',
+        created_at: nowTs,
+        updated_at: nowTs,
+      })
+    } else if (userSnap.data()?.onboarding_completed) {
       throw new HttpsError('failed-precondition', 'Onboarding already completed')
     }
 
-    const activeSnap = await db
+    // Recover from a prior partial run: if a project already exists for this
+    // user but the user doc never got flipped to onboarding_completed, finish
+    // the handshake by flipping the flag and returning the existing project.
+    const existingActive = await db
       .collection('projects')
       .where('user_id', '==', uid)
       .where('status', '==', 'active')
-      .count()
+      .limit(1)
       .get()
-    await enforceFreeLimit(uid, 'active_projects', activeSnap.data().count)
+    if (!existingActive.empty) {
+      const existingId = existingActive.docs[0].id
+      await userRef.set(
+        {
+          onboarding_completed: true,
+          onboarding_meta: {
+            user_type: input.user_type,
+            built_in_public: input.built_in_public,
+          },
+          updated_at: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      )
+      return { project_id: existingId }
+    }
+
+    await enforceFreeLimit(uid, 'active_projects', 0)
 
     let seed: RefinedSeed
     try {
@@ -178,5 +213,29 @@ Return JSON: { "refined_problem": string, "suggested_name": string }
       if (err instanceof HttpsError) throw err
       throw new HttpsError('internal', err instanceof Error ? err.message : 'Failed to complete onboarding')
     }
+  },
+)
+
+/**
+ * Mark onboarding complete without creating a project. Used by the "Skip"
+ * button so the user can land on the dashboard and create a project on
+ * their own terms.
+ */
+export const skipOnboarding = onCall(
+  { region: 'us-central1' },
+  async (req): Promise<{ ok: true }> => {
+    const uid = await gate(req)
+    const db = admin.firestore()
+    const userRef = db.doc(`users/${uid}`)
+    const now = admin.firestore.FieldValue.serverTimestamp()
+    await userRef.set(
+      {
+        onboarding_completed: true,
+        onboarding_skipped: true,
+        updated_at: now,
+      },
+      { merge: true },
+    )
+    return { ok: true }
   },
 )

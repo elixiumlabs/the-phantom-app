@@ -19,7 +19,11 @@
       "Bash(firebase functions:secrets:set GEMINI_API_KEY --data-file=-)",
       "Bash(firebase deploy *)",
       "Bash(firebase apps:list)",
-      "Bash(firebase --project the-phantom-app-io functions:list)"
+      "Bash(firebase --project the-phantom-app-io functions:list)",
+      "Bash(grep -E \"\\\\.ts$|^d\")",
+      "Bash(GOOGLE_CLOUD_PROJECT=the-phantom-app-io node scripts/backfillUser.cjs AATG3dK5T5aqM0GvS86BPr1IWEG3)",
+      "Bash(firebase functions:list)",
+      "Bash(gcloud auth *)"
     ]
   }
 }

@@ -1,9 +1,11 @@
 import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Check, X, Zap, Shield, TrendingUp, Users, Sparkles, Lock } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Check, X, Zap, Shield, TrendingUp, Users, Sparkles, Lock, Loader } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 import NavigationDock from '@/components/NavigationDock'
 import FooterSection from '@/components/FooterSection'
+import { useAuth } from '@/contexts/AuthContext'
+import { startCheckout, getPriceId } from '@/lib/billing'
 
 const VALUE_STACK = [
   { item: 'Four-Phase Validation Framework', value: '$2,997' },
@@ -92,11 +94,38 @@ const GUARANTEES = [
 
 const PricingPage = memo(() => {
   const [annual, setAnnual] = useState(false)
-  
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const { user, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
+
   const proMonthlyPrice = 44
   const proAnnualPrice = 37
   const totalValue = VALUE_STACK.reduce((sum, item) => sum + parseInt(item.value.replace(/[$,]/g, '')), 0)
   const annualSavings = (proMonthlyPrice - proAnnualPrice) * 12
+
+  const cadence = annual ? 'annual' : 'monthly'
+  const proPriceConfigured = Boolean(getPriceId('phantom_pro', cadence))
+
+  const handleProClick = async () => {
+    if (authLoading) return
+    if (!user) {
+      navigate(`/signup?next=/pricing&intent=pro_${cadence}`)
+      return
+    }
+    if (user.plan === 'phantom_pro') {
+      navigate('/dashboard')
+      return
+    }
+    setCheckoutLoading(true)
+    setCheckoutError(null)
+    try {
+      await startCheckout('phantom_pro', cadence)
+    } catch (err) {
+      setCheckoutError(err instanceof Error ? err.message : 'Could not start checkout.')
+      setCheckoutLoading(false)
+    }
+  }
 
   return (
     <div className="relative min-h-screen bg-phantom-black">
@@ -274,9 +303,26 @@ const PricingPage = memo(() => {
                   </p>
                 )}
               </div>
-              <Link to="/signup" className="btn-primary w-full text-center mb-6">
-                Start 14-day free trial
-              </Link>
+              <button
+                type="button"
+                onClick={() => void handleProClick()}
+                disabled={checkoutLoading || (!!user && !proPriceConfigured)}
+                className="btn-primary w-full text-center mb-6 flex items-center justify-center gap-2"
+                title={!proPriceConfigured ? 'Stripe price IDs not configured' : undefined}
+              >
+                {checkoutLoading ? (
+                  <><Loader size={14} className="animate-spin" /> Loading...</>
+                ) : user?.plan === 'phantom_pro' ? (
+                  'You’re on Pro'
+                ) : user ? (
+                  'Upgrade to Pro'
+                ) : (
+                  'Start 14-day free trial'
+                )}
+              </button>
+              {checkoutError && (
+                <p className="font-body text-[13px] text-phantom-danger -mt-3 mb-4">{checkoutError}</p>
+              )}
               <div className="space-y-3">
                 <p className="font-ui text-[12px] text-phantom-text-muted uppercase tracking-wider">Everything in Free, plus:</p>
                 <div className="flex items-start gap-2">

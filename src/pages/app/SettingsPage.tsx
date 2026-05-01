@@ -1,6 +1,8 @@
 import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
+import { Loader } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { startCheckout, openBillingPortal, getPriceId } from '@/lib/billing'
 import AppSidebar from '@/components/app/AppSidebar'
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -25,6 +27,42 @@ const SettingsPage = memo(() => {
   const [notifySignals, setNotifySignals] = useState(true)
   const [notifyPhase, setNotifyPhase] = useState(true)
   const [notifyProduct, setNotifyProduct] = useState(false)
+
+  const [billingLoading, setBillingLoading] = useState(false)
+  const [billingError, setBillingError] = useState<string | null>(null)
+  const [cadence, setCadence] = useState<'monthly' | 'annual'>('annual')
+
+  const plan = user?.plan ?? 'free'
+  const isPaid = plan !== 'free'
+  const planLabel = plan === 'phantom_pro' ? 'Phantom Pro' : plan === 'phantom' ? 'Phantom' : 'Phantom Free'
+  const planSubtext =
+    plan === 'phantom_pro' ? 'All four phases · Unlimited signals · Priority support' :
+    plan === 'phantom' ? 'Active subscription' :
+    '1 brand · Phase 1 & 2 · Limited signals'
+
+  const upgrade = async () => {
+    setBillingLoading(true)
+    setBillingError(null)
+    try {
+      await startCheckout('phantom_pro', cadence)
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : 'Could not start checkout.')
+      setBillingLoading(false)
+    }
+  }
+
+  const manage = async () => {
+    setBillingLoading(true)
+    setBillingError(null)
+    try {
+      await openBillingPortal()
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : 'Could not open billing portal.')
+      setBillingLoading(false)
+    }
+  }
+
+  const proPriceConfigured = Boolean(getPriceId('phantom_pro', cadence))
 
   const saveName = (e: React.FormEvent) => {
     e.preventDefault()
@@ -182,18 +220,66 @@ const SettingsPage = memo(() => {
 
           {/* Plan */}
           <Section title="Plan">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-body text-[14px] text-phantom-text-primary mb-0.5">
-                  Phantom Free
-                </p>
-                <p className="font-body text-[12px] text-phantom-text-muted">
-                  1 brand · Phase 1 & 2 · Limited signals
-                </p>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-body text-[14px] text-phantom-text-primary mb-0.5">
+                    {planLabel}
+                  </p>
+                  <p className="font-body text-[12px] text-phantom-text-muted">
+                    {planSubtext}
+                  </p>
+                </div>
+                {isPaid ? (
+                  <button
+                    type="button"
+                    className="btn-secondary text-sm"
+                    onClick={() => void manage()}
+                    disabled={billingLoading}
+                  >
+                    {billingLoading ? <><Loader size={14} className="animate-spin" /> Opening...</> : 'Manage subscription'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-primary text-sm"
+                    onClick={() => void upgrade()}
+                    disabled={billingLoading || !proPriceConfigured}
+                    title={!proPriceConfigured ? 'Stripe price IDs not configured' : undefined}
+                  >
+                    {billingLoading ? <><Loader size={14} className="animate-spin" /> Loading...</> : 'Upgrade to Pro'}
+                  </button>
+                )}
               </div>
-              <a href="#pricing" className="btn-primary text-sm">
-                Upgrade to Pro
-              </a>
+              {!isPaid && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCadence('monthly')}
+                    className={`font-ui text-[12px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
+                      cadence === 'monthly'
+                        ? 'border-phantom-lime text-phantom-lime bg-phantom-lime/10'
+                        : 'border-phantom-border text-phantom-text-muted hover:text-phantom-text-secondary'
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCadence('annual')}
+                    className={`font-ui text-[12px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
+                      cadence === 'annual'
+                        ? 'border-phantom-lime text-phantom-lime bg-phantom-lime/10'
+                        : 'border-phantom-border text-phantom-text-muted hover:text-phantom-text-secondary'
+                    }`}
+                  >
+                    Annual <span className="opacity-60 ml-1">save 16%</span>
+                  </button>
+                </div>
+              )}
+              {billingError && (
+                <p className="font-body text-[13px] text-phantom-danger">{billingError}</p>
+              )}
             </div>
           </Section>
 

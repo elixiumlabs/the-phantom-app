@@ -1,10 +1,10 @@
-import { memo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Loader, AlertTriangle } from 'lucide-react'
 import LiquidBackground from '@/components/LiquidBackground'
 import { useAuth } from '@/contexts/AuthContext'
-import { completeOnboarding } from '@/lib/functions'
+import { completeOnboarding, skipOnboarding } from '@/lib/functions'
 
 type UserType = 'solo_founder' | 'creator' | 'coach_consultant' | 'agency' | 'other'
 type BuiltInPublic = 'yes' | 'no' | 'currently'
@@ -34,6 +34,18 @@ const OnboardingPage = memo(() => {
   const [historyNote, setHistoryNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pendingDestination, setPendingDestination] = useState<string | null>(null)
+
+  // The server flips onboarding_completed via Firestore. RequireAuth reads
+  // that flag and bounces back to /onboarding if it's still false at the
+  // moment we navigate. So: once we've kicked off the call, wait for the
+  // live AuthContext snapshot to show onboarding_completed=true *before*
+  // routing into the gated app.
+  useEffect(() => {
+    if (pendingDestination && user?.onboardingCompleted) {
+      navigate(pendingDestination, { replace: true })
+    }
+  }, [pendingDestination, user?.onboardingCompleted, navigate])
 
   const canProceed = (): boolean => {
     if (step === 1) return whatBuilding.trim().length >= 3
@@ -53,9 +65,17 @@ const OnboardingPage = memo(() => {
         built_in_public: builtInPublic,
         history_note: historyNote.trim() || undefined,
       })
-      navigate(`/brand/${project_id}/identify`, { replace: true })
+      setPendingDestination(`/project/${project_id}/identify`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not finish onboarding.')
+      const msg = err instanceof Error ? err.message : 'Could not finish onboarding.'
+      // Idempotent recovery: a prior run may have completed server-side even
+      // though the client never received the project_id. Send them to the
+      // dashboard once the listener confirms the flag flipped.
+      if (/onboarding already completed/i.test(msg)) {
+        setPendingDestination('/dashboard')
+        return
+      }
+      setError(msg)
       setSubmitting(false)
     }
   }
@@ -67,6 +87,19 @@ const OnboardingPage = memo(() => {
 
   const back = () => {
     if (step > 1) setStep((s) => (s - 1) as 1 | 2 | 3)
+    else navigate('/')
+  }
+
+  const skip = async () => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      await skipOnboarding({})
+      setPendingDestination('/dashboard')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not skip onboarding.')
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -83,9 +116,19 @@ const OnboardingPage = memo(() => {
           <p className="label text-phantom-lime">
             Phantom setup — step {step} of 3
           </p>
-          <p className="font-body text-[12px] text-phantom-text-muted">
-            {user?.name}
-          </p>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => void skip()}
+              disabled={submitting}
+              className="font-body text-[12px] text-phantom-text-muted hover:text-phantom-text-secondary transition-colors disabled:opacity-50"
+            >
+              Skip for now
+            </button>
+            <p className="font-body text-[12px] text-phantom-text-muted">
+              {user?.name}
+            </p>
+          </div>
         </div>
 
         {/* Progress bar */}
@@ -225,9 +268,9 @@ const OnboardingPage = memo(() => {
           <button
             className="btn-ghost flex items-center gap-2"
             onClick={back}
-            disabled={step === 1 || submitting}
+            disabled={submitting}
           >
-            <ArrowLeft size={14} /> Back
+            <ArrowLeft size={14} /> {step === 1 ? 'Exit' : 'Back'}
           </button>
 
           <button

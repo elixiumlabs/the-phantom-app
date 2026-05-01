@@ -87,6 +87,18 @@ service cloud.firestore {
       match /proof_package/{docId}         { allow read: if ownsProject(projectId); allow write: if false; }
     }
 
+    // Collection-group rules: the per-project rules above match documents only
+    // when accessed via their full path. Cross-project queries (collectionGroup)
+    // hit these rules instead. Read access requires ownership via project_id.
+    match /{path=**}/outreach_log/{docId} {
+      allow read: if isSignedIn()
+        && get(/databases/$(database)/documents/projects/$(resource.data.project_id)).data.user_id == request.auth.uid;
+    }
+    match /{path=**}/iteration_versions/{docId} {
+      allow read: if isSignedIn()
+        && get(/databases/$(database)/documents/projects/$(resource.data.project_id)).data.user_id == request.auth.uid;
+    }
+
     // Proof vault — owner-only. file_url + storage_path written server-side via onFinalize.
     match /proof_vault/{itemId} {
       allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;

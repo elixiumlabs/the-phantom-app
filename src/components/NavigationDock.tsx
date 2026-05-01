@@ -1,6 +1,7 @@
 import { memo, useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
@@ -13,6 +14,10 @@ const NavigationDock = memo(() => {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
+  const { user } = useAuth()
+  const dashHref = user
+    ? (user.onboardingCompleted ? '/dashboard' : '/onboarding')
+    : null
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -66,23 +71,39 @@ const NavigationDock = memo(() => {
 
       {/* Desktop CTA */}
       <div className="hidden md:flex items-center gap-3 z-10">
-        <Link
-          to="/login"
-          className="font-body text-sm text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline px-3"
-        >
-          Log in
-        </Link>
-        <Link
-          to="/signup"
-          className="flex items-center gap-2.5 bg-gradient-to-r from-phantom-lime to-[#5fc91f] text-phantom-black hover:opacity-90 text-sm font-semibold pl-5 pr-2 py-2 rounded-full transition-opacity no-underline"
-        >
-          Start free
-          <span className="size-7 rounded-full bg-phantom-black flex items-center justify-center">
-            <svg width="12" height="10" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M.6 4.602h10m-4-4 4 4-4 4" stroke="#89F336" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-        </Link>
+        {user && dashHref ? (
+          <Link
+            to={dashHref}
+            className="flex items-center gap-2 bg-gradient-to-r from-phantom-lime to-[#5fc91f] text-phantom-black hover:opacity-90 text-sm font-semibold pl-4 pr-2 py-1.5 rounded-full transition-opacity no-underline"
+            aria-label={user.onboardingCompleted ? 'Open dashboard' : 'Finish setup'}
+            title={user.email}
+          >
+            {user.onboardingCompleted ? 'Dashboard' : 'Finish setup'}
+            <span className="size-7 rounded-full bg-phantom-black flex items-center justify-center text-phantom-lime font-display font-bold text-[12px] uppercase">
+              {(user.name || user.email || '?').trim().charAt(0)}
+            </span>
+          </Link>
+        ) : (
+          <>
+            <Link
+              to="/login"
+              className="font-body text-sm text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline px-3"
+            >
+              Log in
+            </Link>
+            <Link
+              to="/signup"
+              className="flex items-center gap-2.5 bg-gradient-to-r from-phantom-lime to-[#5fc91f] text-phantom-black hover:opacity-90 text-sm font-semibold pl-5 pr-2 py-2 rounded-full transition-opacity no-underline"
+            >
+              Start free
+              <span className="size-7 rounded-full bg-phantom-black flex items-center justify-center">
+                <svg width="12" height="10" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M.6 4.602h10m-4-4 4 4-4 4" stroke="#89F336" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </Link>
+          </>
+        )}
       </div>
 
       {/* Mobile hamburger */}
@@ -121,25 +142,47 @@ const NavigationDock = memo(() => {
               )
             })}
             <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-phantom-border-subtle">
-              <Link
-                to="/login"
-                onClick={() => setMenuOpen(false)}
-                className="font-body text-sm text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline px-4 py-2"
-              >
-                Log in
-              </Link>
-              <Link
-                to="/signup"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center justify-center gap-2.5 bg-gradient-to-r from-phantom-lime to-[#5fc91f] text-phantom-black text-sm font-semibold px-5 py-2.5 rounded-full no-underline w-fit"
-              >
-                Start free
-                <span className="size-7 rounded-full bg-phantom-black flex items-center justify-center">
-                  <svg width="12" height="10" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M.6 4.602h10m-4-4 4 4-4 4" stroke="#89F336" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-              </Link>
+              {user && dashHref ? (
+                <>
+                  <span className="font-body text-[12px] text-phantom-text-muted px-4 py-1">
+                    Signed in as {user.email}
+                  </span>
+                  <Link
+                    to={dashHref}
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center justify-center gap-2.5 bg-gradient-to-r from-phantom-lime to-[#5fc91f] text-phantom-black text-sm font-semibold px-5 py-2.5 rounded-full no-underline w-fit"
+                  >
+                    {user.onboardingCompleted ? 'Open dashboard' : 'Finish setup'}
+                    <span className="size-7 rounded-full bg-phantom-black flex items-center justify-center">
+                      <svg width="12" height="10" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M.6 4.602h10m-4-4 4 4-4 4" stroke="#89F336" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setMenuOpen(false)}
+                    className="font-body text-sm text-phantom-text-secondary hover:text-phantom-text-primary transition-colors no-underline px-4 py-2"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center justify-center gap-2.5 bg-gradient-to-r from-phantom-lime to-[#5fc91f] text-phantom-black text-sm font-semibold px-5 py-2.5 rounded-full no-underline w-fit"
+                  >
+                    Start free
+                    <span className="size-7 rounded-full bg-phantom-black flex items-center justify-center">
+                      <svg width="12" height="10" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M.6 4.602h10m-4-4 4 4-4 4" stroke="#89F336" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         )}

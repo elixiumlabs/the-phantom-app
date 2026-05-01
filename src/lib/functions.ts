@@ -27,6 +27,11 @@ export const completeOnboarding = call<
   { project_id: string }
 >('completeOnboarding')
 
+export const skipOnboarding = call<
+  Record<string, never>,
+  { ok: true }
+>('skipOnboarding')
+
 export const deleteProject = call<
   { project_id: string },
   { ok: boolean }

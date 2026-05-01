@@ -112,10 +112,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileUnsub = onSnapshot(
         doc(db, 'users', fbUser.uid),
         (snap) => {
-          setUser(shapeUser(fbUser, snap.exists() ? snap.data() : null))
+          const data = snap.exists() ? snap.data() : null
+          // eslint-disable-next-line no-console
+          console.log('[phantom] users/' + fbUser.uid + ' snapshot:', {
+            exists: snap.exists(),
+            onboarding_completed: data?.onboarding_completed,
+            plan: data?.plan,
+          })
+          setUser(shapeUser(fbUser, data))
           setLoading(false)
         },
-        () => {
+        (err) => {
+          // eslint-disable-next-line no-console
+          console.error('[phantom] users listener error:', err)
           setUser(shapeUser(fbUser, null))
           setLoading(false)
         },
