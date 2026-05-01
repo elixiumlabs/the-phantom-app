@@ -32,6 +32,11 @@ export const skipOnboarding = call<
   { ok: true }
 >('skipOnboarding')
 
+export const adminGrantPro = call<
+  { uid?: string; plan?: 'phantom' | 'phantom_pro' },
+  { ok: true; uid: string; plan: string }
+>('adminGrantPro')
+
 export const deleteProject = call<
   { project_id: string },
   { ok: boolean }

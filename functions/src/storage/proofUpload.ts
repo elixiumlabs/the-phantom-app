@@ -26,7 +26,10 @@ const ALLOWED = /^(image\/.+|application\/pdf|text\/csv)$/
  * Client uploads directly to Storage; the onFinalize trigger creates the
  * proof_vault doc once the bytes are in the bucket.
  */
-export const requestProofUploadUrl = onCall({ region: 'us-central1' }, async (req) => {
+export const requestProofUploadUrl = onCall({ 
+  region: 'us-central1',
+  cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+}, async (req) => {
   const uid = await gate(req)
   const input = validate(Input, req.data)
   if (!ALLOWED.test(input.content_type)) {

@@ -26,7 +26,10 @@
       "Bash(gcloud auth *)",
       "Bash(firebase functions:log --only refineProblemStatement -n 30)",
       "Bash(git check-ignore *)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(firebase functions:secrets:set GROQ_API_KEY --data-file=-)",
+      "Bash(firebase functions:log --only refineProblemStatement -n 20)",
+      "Bash(firebase functions:log --only refineProblemStatement -n 80)"
     ]
   }
 }

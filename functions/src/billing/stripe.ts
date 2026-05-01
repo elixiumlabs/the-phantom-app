@@ -38,7 +38,11 @@ const CheckoutInput = z.object({
 })
 
 export const createCheckoutSession = onCall(
-  { region: 'us-central1', secrets: [STRIPE_SECRET_KEY, APP_URL, STRIPE_PRICE_TO_PLAN] },
+  { 
+    region: 'us-central1', 
+    secrets: [STRIPE_SECRET_KEY, APP_URL, STRIPE_PRICE_TO_PLAN],
+    cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+  },
   async (req) => {
     const uid = await gate(req)
     const { price_id } = validate(CheckoutInput, req.data)
@@ -75,7 +79,11 @@ export const createCheckoutSession = onCall(
 )
 
 export const createBillingPortalSession = onCall(
-  { region: 'us-central1', secrets: [STRIPE_SECRET_KEY, APP_URL] },
+  { 
+    region: 'us-central1', 
+    secrets: [STRIPE_SECRET_KEY, APP_URL],
+    cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+  },
   async (req) => {
     const uid = await gate(req)
     const userSnap = await admin.firestore().doc(`users/${uid}`).get()

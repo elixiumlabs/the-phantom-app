@@ -16,7 +16,10 @@ const Input = z.object({
  * Promote a user to a paid plan with a lifetime flag, bypassing Stripe.
  * Caller must be in ADMIN_UIDS. If `uid` is omitted, promotes the caller.
  */
-export const adminGrantPro = onCall({ region: 'us-central1' }, async (req) => {
+export const adminGrantPro = onCall({ 
+  region: 'us-central1',
+  cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+}, async (req) => {
   const callerUid = req.auth?.uid
   if (!callerUid || !ADMIN_UIDS.has(callerUid)) {
     throw new HttpsError('permission-denied', 'Admin only')

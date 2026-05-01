@@ -23,7 +23,11 @@ interface RefinedSeed {
  * with that problem pre-filled in Phase 01.
  */
 export const completeOnboarding = onCall(
-  { secrets: [GEMINI_API_KEY], region: 'us-central1' },
+  { 
+    secrets: [GEMINI_API_KEY], 
+    region: 'us-central1',
+    cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+  },
   async (req): Promise<{ project_id: string }> => {
     try {
       const uid = await gate(req)
@@ -222,7 +226,10 @@ Return JSON: { "refined_problem": string, "suggested_name": string }
  * their own terms.
  */
 export const skipOnboarding = onCall(
-  { region: 'us-central1' },
+  { 
+    region: 'us-central1',
+    cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+  },
   async (req): Promise<{ ok: true }> => {
     const uid = await gate(req)
     const db = admin.firestore()

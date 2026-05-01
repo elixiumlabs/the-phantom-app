@@ -147,6 +147,7 @@ export const exportLockInPdf = onCall(
     memory: '1GiB',
     timeoutSeconds: 120,
     secrets: [PUPPETEER_EXEC_PATH, RESEND_API_KEY],
+    cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
   },
   async (req): Promise<{ url: string; storage_path: string } | { html: string; fallback: true }> => {
     const uid = await gate(req)

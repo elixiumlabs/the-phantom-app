@@ -21,7 +21,10 @@ async function deleteCollection(ref: FirebaseFirestore.CollectionReference): Pro
   }
 }
 
-export const deleteProject = onCall({ region: 'us-central1' }, async (req) => {
+export const deleteProject = onCall({ 
+  region: 'us-central1',
+  cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+}, async (req) => {
   const uid = await gate(req)
   const { project_id } = validate(Input, req.data)
   const { ref } = await loadOwnedProject(uid, project_id)

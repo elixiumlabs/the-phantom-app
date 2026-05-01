@@ -28,11 +28,9 @@ if (isFirebaseConfigured) {
     _googleProvider = new GoogleAuthProvider()
     _googleProvider.setCustomParameters({ prompt: 'select_account' })
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('[phantom] Firebase failed to initialize:', err)
   }
 } else {
-  // eslint-disable-next-line no-console
   console.warn(
     '[phantom] Firebase env vars missing. Auth + Firestore are disabled. ' +
       'Copy .env.example to .env.local and fill in VITE_FIREBASE_* values.',

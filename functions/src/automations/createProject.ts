@@ -17,7 +17,10 @@ export interface CreateProjectResult {
  * Creates a project doc + the four phase subdocs in one batched write.
  * Free plan is capped at 1 active project (PRD §05).
  */
-export const createProject = onCall({ region: 'us-central1' }, async (req): Promise<CreateProjectResult> => {
+export const createProject = onCall({ 
+  region: 'us-central1',
+  cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+}, async (req): Promise<CreateProjectResult> => {
   const uid = await gate(req)
   const { name, initial_problem } = validate(Input, req.data)
 

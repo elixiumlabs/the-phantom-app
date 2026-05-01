@@ -1,6 +1,6 @@
 import { memo, useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Loader, Sparkles, CheckCircle } from 'lucide-react'
+import { Loader, Sparkles, CheckCircle, Upload, Linkedin } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useProjects } from '@/contexts/ProjectContext'
 import { doc, updateDoc } from 'firebase/firestore'
@@ -33,9 +33,14 @@ const PhaseIdentify = memo(() => {
   const [extractingAdvantages, setExtractingAdvantages] = useState(false)
   const [generatingPositioning, setGeneratingPositioning] = useState(false)
   const [completingPhase, setCompletingPhase] = useState(false)
+  const [uploadingResume, setUploadingResume] = useState(false)
 
   // Error states
   const [error, setError] = useState('')
+  
+  // Resume state
+  const [resumeFile, setResumeFile] = useState<File | null>(null)
+  const [resumeText, setResumeText] = useState('')
 
   // Sync Firestore data to local state
   useEffect(() => {
@@ -286,14 +291,100 @@ const PhaseIdentify = memo(() => {
           placeholder="I've spent 5 years as a [role] at [company]. I built [thing] that got [result]. I survived [challenge]..."
         />
 
+        {/* Optional: LinkedIn or Resume */}
+        <div className="mb-4 p-4 bg-phantom-black/20 border border-phantom-border-subtle rounded">
+          <p className="label text-phantom-text-secondary mb-3">
+            <span className="text-phantom-text-muted text-[11px] uppercase tracking-wide">Optional</span> — Add more context
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* LinkedIn URL */}
+            <div>
+              <label className="flex items-center gap-2 font-body text-[13px] text-phantom-text-secondary mb-2">
+                <Linkedin size={14} className="text-phantom-lime" />
+                LinkedIn Profile
+              </label>
+              <input
+                type="url"
+                className="input text-[13px]"
+                placeholder="linkedin.com/in/yourprofile"
+                onChange={(e) => {
+                  const url = e.target.value.trim()
+                  if (url && url.includes('linkedin.com')) {
+                    setBackgroundText(prev => {
+                      // Remove previous LinkedIn URL if exists
+                      const withoutLinkedIn = prev.replace(/LinkedIn:.*?(?=\n\n|$)/gs, '').trim()
+                      return withoutLinkedIn + (withoutLinkedIn ? '\n\n' : '') + `LinkedIn: ${url}`
+                    })
+                  }
+                }}
+              />
+            </div>
+
+            {/* Resume Upload */}
+            <div>
+              <label className="flex items-center gap-2 font-body text-[13px] text-phantom-text-secondary mb-2">
+                <Upload size={14} className="text-phantom-lime" />
+                Resume / CV
+              </label>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".txt,.doc,.docx"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    
+                    setResumeFile(file)
+                    setUploadingResume(true)
+                    
+                    try {
+                      const text = await file.text()
+                      setResumeText(text)
+                      setBackgroundText(prev => {
+                        // Remove previous resume content if exists
+                        const withoutResume = prev.replace(/Resume content:[\s\S]*?(?=\n\nLinkedIn:|$)/g, '').trim()
+                        return withoutResume + (withoutResume ? '\n\n' : '') + `Resume content:\n${text.slice(0, 3000)}`
+                      })
+                      setError('')
+                    } catch (err) {
+                      setError('Failed to read file. Please use .txt format or paste your resume content directly in the text area above.')
+                    } finally {
+                      setUploadingResume(false)
+                    }
+                  }}
+                />
+                <div className="input text-[13px] flex items-center justify-between pointer-events-none">
+                  <span className={resumeFile ? 'text-phantom-text-primary' : 'text-phantom-text-muted'}>
+                    {resumeFile ? resumeFile.name : 'Choose file...'}
+                  </span>
+                  {resumeFile && <span className="text-phantom-lime text-[11px]">✓</span>}
+                </div>
+              </div>
+              <p className="font-body text-[10px] text-phantom-text-muted mt-1">
+                .txt format works best. For PDF, copy/paste content above.
+              </p>
+            </div>
+          </div>
+          
+          <p className="font-body text-[11px] text-phantom-text-muted mt-3">
+            Adding LinkedIn or resume helps extract more specific advantages from your full work history.
+          </p>
+        </div>
+
         <button
           className="btn-primary mb-4"
           onClick={handleExtractAdvantages}
-          disabled={extractingAdvantages || !backgroundText.trim()}
+          disabled={extractingAdvantages || uploadingResume || !backgroundText.trim()}
         >
           {extractingAdvantages ? (
             <>
               <Loader size={14} className="animate-spin" /> Extracting advantages...
+            </>
+          ) : uploadingResume ? (
+            <>
+              <Loader size={14} className="animate-spin" /> Processing resume...
             </>
           ) : (
             <>

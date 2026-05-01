@@ -1,9 +1,19 @@
 import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Loader } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { Loader, Check } from 'lucide-react'
+import { doc, updateDoc } from 'firebase/firestore'
+import { useAuth, type LLMProvider } from '@/contexts/AuthContext'
+import { db } from '@/lib/firebase'
 import { startCheckout, openBillingPortal, getPriceId } from '@/lib/billing'
 import AppSidebar from '@/components/app/AppSidebar'
+
+const LLM_OPTIONS: Array<{ value: LLMProvider; label: string; sub: string }> = [
+  { value: 'gemini',         label: 'Google Gemini',     sub: 'gemini-1.5-flash · balanced default' },
+  { value: 'groq',           label: 'Llama 3.3 70B',     sub: 'via Groq · large open model, slower' },
+  { value: 'groq_fast',      label: 'Llama 3.1 8B Fast', sub: 'via Groq · cheapest, fastest' },
+  { value: 'qwen',           label: 'Qwen3 32B',         sub: 'via Groq · strong reasoning' },
+  { value: 'groq_compound',  label: 'Groq Compound',     sub: 'via Groq · agentic w/ tools' },
+]
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="mb-10">
@@ -63,6 +73,23 @@ const SettingsPage = memo(() => {
   }
 
   const proPriceConfigured = Boolean(getPriceId('phantom_pro', cadence))
+
+  const [llmSaving, setLlmSaving] = useState<LLMProvider | null>(null)
+  const [llmError, setLlmError] = useState<string | null>(null)
+  const currentProvider = user?.llmProvider ?? 'gemini'
+
+  const setProvider = async (next: LLMProvider) => {
+    if (!user || next === currentProvider || llmSaving) return
+    setLlmSaving(next)
+    setLlmError(null)
+    try {
+      await updateDoc(doc(db, 'users', user.id), { llm_provider: next })
+    } catch (err) {
+      setLlmError(err instanceof Error ? err.message : 'Could not switch model.')
+    } finally {
+      setLlmSaving(null)
+    }
+  }
 
   const saveName = (e: React.FormEvent) => {
     e.preventDefault()
@@ -280,7 +307,58 @@ const SettingsPage = memo(() => {
               {billingError && (
                 <p className="font-body text-[13px] text-phantom-danger">{billingError}</p>
               )}
+              {user?.id === 'AATG3dK5T5aqM0GvS86BPr1IWEG3' && plan !== 'phantom_pro' && (
+                <div className="pt-3 border-t border-phantom-border-subtle">
+                  <p className="font-body text-[12px] text-phantom-text-muted mb-2">
+                    Admin: restore lifetime Pro on this account.
+                  </p>
+                  <AdminGrantProButton />
+                </div>
+              )}
             </div>
+          </Section>
+
+          {/* Model */}
+          <Section title="Model">
+            <p className="font-body text-[13px] text-phantom-text-secondary mb-4">
+              Pick which LLM powers your AI generators. Your choice applies to every Phase generator immediately.
+            </p>
+            <div className="flex flex-col gap-2">
+              {LLM_OPTIONS.map((opt) => {
+                const active = currentProvider === opt.value
+                const saving = llmSaving === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => void setProvider(opt.value)}
+                    disabled={!!llmSaving || active}
+                    className={`flex items-center justify-between gap-4 text-left card transition-colors ${
+                      active
+                        ? 'border-phantom-lime bg-phantom-lime/5'
+                        : 'border-phantom-border-subtle hover:border-phantom-lime/30'
+                    } ${llmSaving && !saving ? 'opacity-50' : ''}`}
+                  >
+                    <div>
+                      <p className="font-body text-[14px] text-phantom-text-primary mb-0.5">
+                        {opt.label}
+                      </p>
+                      <p className="font-body text-[12px] text-phantom-text-muted">{opt.sub}</p>
+                    </div>
+                    <div className="shrink-0">
+                      {saving ? (
+                        <Loader size={14} className="animate-spin text-phantom-text-muted" />
+                      ) : active ? (
+                        <Check size={16} className="text-phantom-lime" />
+                      ) : null}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            {llmError && (
+              <p className="font-body text-[13px] text-phantom-danger mt-3">{llmError}</p>
+            )}
           </Section>
 
           {/* Danger zone */}
@@ -315,3 +393,30 @@ const SettingsPage = memo(() => {
 
 SettingsPage.displayName = 'SettingsPage'
 export default SettingsPage
+
+const AdminGrantProButton = memo(() => {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const grant = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const { adminGrantPro } = await import('@/lib/functions')
+      await adminGrantPro({ plan: 'phantom_pro' })
+      // The Firestore listener will flip the plan automatically.
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not grant.')
+    } finally {
+      setLoading(false)
+    }
+  }
+  return (
+    <div>
+      <button type="button" className="btn-secondary text-sm" onClick={() => void grant()} disabled={loading}>
+        {loading ? <><Loader size={14} className="animate-spin" /> Granting...</> : 'Restore lifetime Pro'}
+      </button>
+      {error && <p className="font-body text-[12px] text-phantom-danger mt-2">{error}</p>}
+    </div>
+  )
+})
+AdminGrantProButton.displayName = 'AdminGrantProButton'

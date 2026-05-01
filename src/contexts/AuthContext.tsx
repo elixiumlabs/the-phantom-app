@@ -17,6 +17,7 @@ const NOT_CONFIGURED = new Error(
 )
 
 export type Plan = 'free' | 'phantom' | 'phantom_pro'
+export type LLMProvider = 'gemini' | 'groq' | 'groq_fast' | 'qwen' | 'groq_compound'
 
 export interface User {
   id: string
@@ -24,6 +25,7 @@ export interface User {
   email: string
   emailVerified: boolean
   plan: Plan
+  llmProvider: LLMProvider
   onboardingCompleted: boolean
   stripeCustomerId?: string
   stripeSubscriptionId?: string
@@ -68,12 +70,22 @@ function authErrorMessage(code: string): string {
 }
 
 function shapeUser(fbUser: FirebaseUser, profile: Record<string, unknown> | null): User {
+  const rawProvider = profile?.llm_provider as string | undefined
+  const llmProvider: LLMProvider =
+    rawProvider === 'gemini' ||
+    rawProvider === 'groq' ||
+    rawProvider === 'groq_fast' ||
+    rawProvider === 'qwen' ||
+    rawProvider === 'groq_compound'
+      ? rawProvider
+      : 'gemini'
   return {
     id: fbUser.uid,
     name: (profile?.full_name as string | undefined) ?? fbUser.displayName ?? fbUser.email?.split('@')[0] ?? 'phantom',
     email: fbUser.email ?? '',
     emailVerified: fbUser.emailVerified,
     plan: ((profile?.plan as Plan | undefined) ?? 'free'),
+    llmProvider,
     onboardingCompleted: Boolean(profile?.onboarding_completed),
     stripeCustomerId: profile?.stripe_customer_id as string | undefined,
     stripeSubscriptionId: profile?.stripe_subscription_id as string | undefined,
@@ -112,19 +124,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileUnsub = onSnapshot(
         doc(db, 'users', fbUser.uid),
         (snap) => {
-          const data = snap.exists() ? snap.data() : null
-          // eslint-disable-next-line no-console
-          console.log('[phantom] users/' + fbUser.uid + ' snapshot:', {
-            exists: snap.exists(),
-            onboarding_completed: data?.onboarding_completed,
-            plan: data?.plan,
-          })
-          setUser(shapeUser(fbUser, data))
+          setUser(shapeUser(fbUser, snap.exists() ? snap.data() : null))
           setLoading(false)
         },
-        (err) => {
-          // eslint-disable-next-line no-console
-          console.error('[phantom] users listener error:', err)
+        () => {
           setUser(shapeUser(fbUser, null))
           setLoading(false)
         },

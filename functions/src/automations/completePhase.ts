@@ -21,7 +21,10 @@ function allTrue(checklist: Record<string, unknown> | undefined): boolean {
  * Server-side phase gate. Refuses to mark a phase complete unless every
  * PRD-mandated requirement is met. The UI checklist is advisory; this is law.
  */
-export const completePhase = onCall({ region: 'us-central1' }, async (req) => {
+export const completePhase = onCall({ 
+  region: 'us-central1',
+  cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+}, async (req) => {
   const uid = await gate(req)
   const { project_id, phase } = validate(Input, req.data)
   const { ref, data } = await loadOwnedProject(uid, project_id)
