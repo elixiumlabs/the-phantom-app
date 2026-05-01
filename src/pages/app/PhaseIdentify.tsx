@@ -73,8 +73,10 @@ const PhaseIdentify = memo(() => {
       await refineProblemStatement({ draft: problemDraft, project_id: id })
       // AI options are auto-saved to Firestore by backend
       setRefiningProblem(false)
-    } catch (err) {
-      setError((err as Error).message)
+    } catch (err: any) {
+      console.error('refineProblemStatement error:', err)
+      const message = err?.message || err?.code || 'Failed to refine problem statement'
+      setError(message)
       setRefiningProblem(false)
     }
   }

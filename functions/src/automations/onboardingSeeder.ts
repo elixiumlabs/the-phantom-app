@@ -1,7 +1,7 @@
 import * as admin from 'firebase-admin'
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { z } from 'zod'
-import { GEMINI_API_KEY, generateJSON } from '../lib/anthropic'
+import { GEMINI_API_KEY, generateJSON } from '../lib/ai'
 import { gate, validate, enforceFreeLimit } from '../lib/guards'
 import { logActivity } from '../lib/activity'
 

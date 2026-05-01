@@ -31,6 +31,7 @@ export { exportLockInPdf } from './generators/exportLockInPdf'
 // ─── Automations: callables ────────────────────────────────────────────────
 export { createProject } from './automations/createProject'
 export { completeOnboarding, skipOnboarding } from './automations/onboardingSeeder'
+export { adminGrantPro } from './automations/adminGrant'
 export { deleteProject } from './automations/deleteProject'
 export { completePhase } from './automations/completePhase'
 

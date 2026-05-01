@@ -1,7 +1,7 @@
 import * as admin from 'firebase-admin'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { RESEND_API_KEY, sendMail } from '../lib/mailer'
-import { generateJSON } from '../lib/anthropic'
+import { generateJSON } from '../lib/ai'
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 

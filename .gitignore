@@ -1,5 +1,13 @@
 node_modules
 dist
+.env
 .env.local
+.env.*.local
 .firebase
 .vercel
+
+# Local test scripts containing secrets — never commit
+functions/test-*.js
+functions/scripts/local-*.cjs
+*-secret.json
+*-credentials.json
