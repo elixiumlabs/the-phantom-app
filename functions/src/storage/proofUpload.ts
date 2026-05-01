@@ -70,7 +70,7 @@ export const requestProofUploadUrl = onCall({ region: 'us-central1' }, async (re
  * via the signed-URL extension headers.
  */
 export const onProofFileFinalized = onObjectFinalized(
-  { region: 'us-central1', bucket: undefined },
+  { region: 'us-east1', bucket: undefined },
   async (event) => {
     const path = event.data.name
     if (!path?.startsWith('users/')) return

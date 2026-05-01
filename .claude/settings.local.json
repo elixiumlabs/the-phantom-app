@@ -17,7 +17,9 @@
       "Bash(firebase use *)",
       "Bash(firebase projects:list)",
       "Bash(firebase functions:secrets:set GEMINI_API_KEY --data-file=-)",
-      "Bash(firebase deploy *)"
+      "Bash(firebase deploy *)",
+      "Bash(firebase apps:list)",
+      "Bash(firebase --project the-phantom-app-io functions:list)"
     ]
   }
 }
