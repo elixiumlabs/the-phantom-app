@@ -12,6 +12,13 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    proxy: {
+      '/functions': {
+        target: 'https://us-central1-the-phantom-app-io.cloudfunctions.net',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/functions/, ''),
+      },
+    },
   },
 })
 

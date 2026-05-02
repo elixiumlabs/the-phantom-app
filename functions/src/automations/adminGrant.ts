@@ -18,7 +18,12 @@ const Input = z.object({
  */
 export const adminGrantPro = onCall({ 
   region: 'us-central1',
-  cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+  cors: [
+    /localhost:\d+$/,
+    'https://the-phantom-app-io.web.app',
+    'https://the-phantom-app-io.firebaseapp.com',
+    'https://the-phantom-app.vercel.app'
+  ]
 }, async (req) => {
   const callerUid = req.auth?.uid
   if (!callerUid || !ADMIN_UIDS.has(callerUid)) {

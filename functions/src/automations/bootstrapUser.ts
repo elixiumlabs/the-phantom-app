@@ -1,6 +1,8 @@
 import * as admin from 'firebase-admin'
 import * as functionsV1 from 'firebase-functions/v1'
 
+const FOUNDER_EMAIL = 'brandsbyempress@gmail.com'
+
 /**
  * Auth onCreate trigger.
  *
@@ -16,13 +18,17 @@ export const bootstrapUser = functionsV1
   .onCreate(async (user) => {
     const ref = admin.firestore().doc(`users/${user.uid}`)
     const now = admin.firestore.FieldValue.serverTimestamp()
+    const isFounder = user.email?.toLowerCase() === FOUNDER_EMAIL
 
     await ref.set(
       {
         email: user.email ?? null,
         full_name: user.displayName ?? null,
         avatar_url: user.photoURL ?? null,
-        plan: 'free',
+        plan: isFounder ? 'phantom_pro' : 'free',
+        is_admin: isFounder,
+        lifetime: isFounder,
+        subscription_status: isFounder ? 'lifetime' : null,
         onboarding_completed: false,
         stripe_customer_id: null,
         stripe_subscription_id: null,
@@ -37,7 +43,10 @@ export const bootstrapUser = functionsV1
       user_id: user.uid,
       project_id: null,
       action: 'user_created',
-      metadata: { provider: user.providerData[0]?.providerId ?? 'password' },
+      metadata: { 
+        provider: user.providerData[0]?.providerId ?? 'password',
+        is_founder: isFounder,
+      },
       created_at: now,
     })
   })

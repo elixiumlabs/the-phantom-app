@@ -26,7 +26,12 @@ export const completeOnboarding = onCall(
   { 
     secrets: [GEMINI_API_KEY], 
     region: 'us-central1',
-    cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+    cors: [
+      /localhost:\d+$/,
+      'https://the-phantom-app-io.web.app',
+      'https://the-phantom-app-io.firebaseapp.com',
+      'https://the-phantom-app.vercel.app'
+    ]
   },
   async (req): Promise<{ project_id: string }> => {
     try {
@@ -228,7 +233,12 @@ Return JSON: { "refined_problem": string, "suggested_name": string }
 export const skipOnboarding = onCall(
   { 
     region: 'us-central1',
-    cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+    cors: [
+      /localhost:\d+$/,
+      'https://the-phantom-app-io.web.app',
+      'https://the-phantom-app-io.firebaseapp.com',
+      'https://the-phantom-app.vercel.app'
+    ]
   },
   async (req): Promise<{ ok: true }> => {
     const uid = await gate(req)

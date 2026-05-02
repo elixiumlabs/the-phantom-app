@@ -41,7 +41,12 @@ export const createCheckoutSession = onCall(
   { 
     region: 'us-central1', 
     secrets: [STRIPE_SECRET_KEY, APP_URL, STRIPE_PRICE_TO_PLAN],
-    cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+    cors: [
+      /localhost:\d+$/,
+      'https://the-phantom-app-io.web.app',
+      'https://the-phantom-app-io.firebaseapp.com',
+      'https://the-phantom-app.vercel.app'
+    ]
   },
   async (req) => {
     const uid = await gate(req)
@@ -82,7 +87,12 @@ export const createBillingPortalSession = onCall(
   { 
     region: 'us-central1', 
     secrets: [STRIPE_SECRET_KEY, APP_URL],
-    cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+    cors: [
+      /localhost:\d+$/,
+      'https://the-phantom-app-io.web.app',
+      'https://the-phantom-app-io.firebaseapp.com',
+      'https://the-phantom-app.vercel.app'
+    ]
   },
   async (req) => {
     const uid = await gate(req)

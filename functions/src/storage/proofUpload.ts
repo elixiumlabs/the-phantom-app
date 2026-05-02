@@ -28,7 +28,12 @@ const ALLOWED = /^(image\/.+|application\/pdf|text\/csv)$/
  */
 export const requestProofUploadUrl = onCall({ 
   region: 'us-central1',
-  cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+  cors: [
+    /localhost:\d+$/,
+    'https://the-phantom-app-io.web.app',
+    'https://the-phantom-app-io.firebaseapp.com',
+    'https://the-phantom-app.vercel.app'
+  ]
 }, async (req) => {
   const uid = await gate(req)
   const input = validate(Input, req.data)

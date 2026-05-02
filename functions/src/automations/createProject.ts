@@ -19,7 +19,12 @@ export interface CreateProjectResult {
  */
 export const createProject = onCall({ 
   region: 'us-central1',
-  cors: [/localhost:\d+$/, 'https://the-phantom-app-io.web.app', 'https://the-phantom-app-io.firebaseapp.com']
+  cors: [
+    /localhost:\d+$/,
+    'https://the-phantom-app-io.web.app',
+    'https://the-phantom-app-io.firebaseapp.com',
+    'https://the-phantom-app.vercel.app'
+  ]
 }, async (req): Promise<CreateProjectResult> => {
   const uid = await gate(req)
   const { name, initial_problem } = validate(Input, req.data)

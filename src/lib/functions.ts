@@ -1,7 +1,12 @@
-import { getFunctions, httpsCallable } from 'firebase/functions'
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions'
 import { app } from './firebase'
 
 const fns = getFunctions(app, 'us-central1')
+
+// Only connect to emulator if explicitly enabled via env var
+if (import.meta.env.VITE_USE_EMULATOR === 'true') {
+  connectFunctionsEmulator(fns, 'localhost', 5001)
+}
 
 function call<TIn, TOut>(name: string) {
   const fn = httpsCallable<TIn, TOut>(fns, name)
