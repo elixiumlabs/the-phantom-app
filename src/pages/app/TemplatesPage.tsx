@@ -130,6 +130,90 @@ I am working with [small number] people right now at a reduced rate in exchange 
     ],
   },
   {
+    id: 'offer-email',
+    category: 'Making the Offer',
+    name: 'Offer Email — Problem-to-Outcome Pitch',
+    platform: 'Email',
+    when: 'You already received meaningful research responses and want to make the first direct offer by email.',
+    body: `Subject: Based on what you shared about [problem]
+
+Hi [Name],
+
+You mentioned [their exact pain in their words]. I am building [offer name] specifically to solve that.
+
+In short: [one sentence on what it is].
+Outcome: [specific measurable result].
+Best fit for: [who it is for].
+
+If useful, I can walk you through it in 15 minutes and we can quickly decide if it's a fit.
+
+[Your name]`,
+    tips: [
+      'Start with their words before your product name.',
+      'Keep the core offer to 3 short lines: what it is, outcome, fit.',
+      'Invite a short fit-check call rather than forcing a hard close by email.',
+    ],
+  },
+  {
+    id: 'offer-dm-low-friction',
+    category: 'Making the Offer',
+    name: 'DM Offer — Low-Friction Pilot Invite',
+    platform: 'Twitter / LinkedIn / Instagram DM',
+    when: 'They engaged in research and seem interested, but may be hesitant to commit to full scope.',
+    body: `Given what you shared about [problem], I think you are exactly who this pilot is for.
+
+I am running a small test with [number] people:
+- Focus: [specific problem to solve]
+- Timeline: [time frame]
+- Outcome target: [specific result]
+
+If it works, great. If not, you still leave with [clear value artifact]. Want details?`,
+    tips: [
+      'Position as a pilot with clear boundaries and outcome target.',
+      'Include "if not" downside protection to reduce perceived risk.',
+      'End with a lightweight CTA ("Want details?") to keep momentum.',
+    ],
+  },
+  {
+    id: 'offer-objection-price',
+    category: 'Making the Offer',
+    name: 'Offer Response — Price Objection Reframe',
+    platform: 'Email / DM',
+    when: 'They say the offer sounds useful but expensive.',
+    body: `Totally fair question.
+
+The way to evaluate this is against the current cost of [problem] in [time/money/lost opportunities], not against the sticker price alone.
+
+If we hit [specific outcome], this should return more than it costs. If we do not, I do not want you locked into something that is not working.
+
+If helpful, I can break down expected ROI using your numbers before you decide.`,
+    tips: [
+      'Acknowledge first — never argue with the objection.',
+      'Reframe around cost-of-problem and expected return.',
+      'Offer to run the math with their numbers to make it concrete.',
+    ],
+  },
+  {
+    id: 'offer-final-followup',
+    category: 'Making the Offer',
+    name: 'Offer Follow-Up — Decision Prompt',
+    platform: 'Email / DM',
+    when: 'They showed interest, received details, but have gone quiet for several days.',
+    body: `Quick follow-up on [offer name].
+
+No pressure either way — just want to close the loop. Should we:
+1) move forward,
+2) revisit later, or
+3) park this for now?
+
+Any of the three is totally fine.`,
+    tips: [
+      'Use explicit options to make replying easy.',
+      'Neutral tone gets more responses than pressure tactics.',
+      'If they choose later, set a concrete follow-up date immediately.',
+    ],
+  },
+  {
     id: 'linkedin',
     category: 'LinkedIn',
     name: 'LinkedIn Connection Request Note',
