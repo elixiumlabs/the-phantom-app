@@ -244,7 +244,7 @@ const FeaturesPage = memo(() => {
             </p>
           </motion.div>
 
-          {PHASE_FEATURES.map(({ phase, title, subtitle, icon: Icon, image, description, features }, phaseIndex) => (
+          {PHASE_FEATURES.map(({ phase, title, subtitle, icon: Icon, description, features }, phaseIndex) => (
             <motion.div
               key={phase}
               className="mb-24 last:mb-0"
@@ -328,7 +328,7 @@ const FeaturesPage = memo(() => {
           </motion.div>
 
           <div className="space-y-16">
-            {CORE_TOOLS.map(({ icon: Icon, name, description, image }, i) => (
+            {CORE_TOOLS.map(({ icon: Icon, name, description }, i) => (
               <motion.div
                 key={name}
                 className="grid md:grid-cols-2 gap-12 items-center"

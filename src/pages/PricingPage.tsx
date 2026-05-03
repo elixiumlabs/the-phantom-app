@@ -1,6 +1,6 @@
 import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Check, X, Zap, Shield, TrendingUp, Users, Sparkles, Lock, Loader } from 'lucide-react'
+import { Check, X, Shield, TrendingUp, Lock, Loader } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import NavigationDock from '@/components/NavigationDock'
 import FooterSection from '@/components/FooterSection'

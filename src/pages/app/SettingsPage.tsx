@@ -1,9 +1,10 @@
 import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Loader, Check } from 'lucide-react'
-import { doc, updateDoc } from 'firebase/firestore'
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth'
 import { useAuth, type LLMProvider } from '@/contexts/AuthContext'
-import { db } from '@/lib/firebase'
+import { db, auth } from '@/lib/firebase'
 import { startCheckout, openBillingPortal, getPriceId } from '@/lib/billing'
 import AppSidebar from '@/components/app/AppSidebar'
 
@@ -91,20 +92,82 @@ const SettingsPage = memo(() => {
     }
   }
 
-  const saveName = (e: React.FormEvent) => {
+  const saveName = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+    if (!user) return
+    try {
+      await updateDoc(doc(db, 'users', user.id), { name })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (err) {
+      console.error('Failed to update name:', err)
+    }
   }
 
-  const savePassword = (e: React.FormEvent) => {
+  const savePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setPwError('')
     if (newPw.length < 6) { setPwError('Password must be at least 6 characters.'); return }
     if (newPw !== confirmPw) { setPwError('Passwords do not match.'); return }
-    setCurrentPw(''); setNewPw(''); setConfirmPw('')
-    setPwSaved(true)
-    setTimeout(() => setPwSaved(false), 2500)
+    
+    const firebaseUser = auth.currentUser
+    if (!firebaseUser || !user?.email) {
+      setPwError('Not authenticated.')
+      return
+    }
+
+    try {
+      // Re-authenticate before password change
+      const credential = EmailAuthProvider.credential(user.email, currentPw)
+      await reauthenticateWithCredential(firebaseUser, credential)
+      await updatePassword(firebaseUser, newPw)
+      
+      setCurrentPw('')
+      setNewPw('')
+      setConfirmPw('')
+      setPwSaved(true)
+      setTimeout(() => setPwSaved(false), 2500)
+    } catch (err: any) {
+      if (err.code === 'auth/wrong-password') {
+        setPwError('Current password is incorrect.')
+      } else if (err.code === 'auth/weak-password') {
+        setPwError('New password is too weak.')
+      } else {
+        setPwError(err.message || 'Failed to update password.')
+      }
+    }
+  }
+
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== 'DELETE') {
+      setDeleteError('Type DELETE to confirm.')
+      return
+    }
+
+    const firebaseUser = auth.currentUser
+    if (!firebaseUser || !user) return
+
+    setDeleting(true)
+    setDeleteError('')
+
+    try {
+      // Delete Firestore user doc first
+      await deleteDoc(doc(db, 'users', user.id))
+      // Delete Firebase Auth user
+      await deleteUser(firebaseUser)
+      // Logout will happen automatically via auth state listener
+    } catch (err: any) {
+      if (err.code === 'auth/requires-recent-login') {
+        setDeleteError('Please log out and log back in, then try again.')
+      } else {
+        setDeleteError(err.message || 'Failed to delete account.')
+      }
+      setDeleting(false)
+    }
   }
 
   return (
@@ -374,14 +437,40 @@ const SettingsPage = memo(() => {
                 </button>
               </div>
               <div className="divider" />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-body text-[14px] text-phantom-danger mb-0.5">Delete account</p>
-                  <p className="font-body text-[12px] text-phantom-text-muted">Permanently delete your account and all brand data. This cannot be undone.</p>
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="font-body text-[14px] text-phantom-danger mb-0.5">Delete account</p>
+                    <p className="font-body text-[12px] text-phantom-text-muted">Permanently delete your account and all brand data. This cannot be undone.</p>
+                  </div>
                 </div>
-                <button type="button" className="btn-danger shrink-0">
-                  Delete account
-                </button>
+                <div className="max-w-sm space-y-3">
+                  <div>
+                    <label className="label text-phantom-text-secondary mb-2 block">Type DELETE to confirm</label>
+                    <input
+                      className="input"
+                      value={deleteConfirm}
+                      onChange={(e) => setDeleteConfirm(e.target.value)}
+                      placeholder="DELETE"
+                      disabled={deleting}
+                    />
+                  </div>
+                  {deleteError && (
+                    <p className="font-body text-[13px] text-phantom-danger">{deleteError}</p>
+                  )}
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={handleDeleteAccount}
+                    disabled={deleting || deleteConfirm !== 'DELETE'}
+                  >
+                    {deleting ? (
+                      <><Loader size={14} className="animate-spin" /> Deleting...</>
+                    ) : (
+                      'Delete account permanently'
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </Section>

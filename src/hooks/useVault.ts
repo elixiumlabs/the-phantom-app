@@ -59,8 +59,10 @@ export function useVault(projectId?: string | null): VaultResult {
               source: data.source,
               date: data.date,
               tags: data.tags ?? [],
+              content_type: data.content_type ?? null,
+              size: data.size ?? null,
               created_at: data.created_at ?? null,
-            }
+            } as ProofVaultItem
           }),
         )
         setLoading(false)

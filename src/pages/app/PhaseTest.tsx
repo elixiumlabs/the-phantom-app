@@ -636,7 +636,7 @@ const PhaseTest = memo(() => {
                     <td className="py-3 pr-4 font-body text-[12px] text-phantom-text-muted whitespace-nowrap">{e.date}</td>
                     <td className="py-3 pr-4 font-body text-[13px] text-phantom-text-secondary">{e.platform}</td>
                     <td className="py-3 pr-4">
-                      <span className="badge text-[11px]">{e.outreach_type?.replace(/_/g, ' ')}</span>
+                      <span className="badge text-[11px]">{(e as any).outreach_type?.replace(/_/g, ' ') ?? 'other'}</span>
                     </td>
                     <td className="py-3 pr-4 font-body text-[13px] text-phantom-text-muted">
                       {/* identifier may not exist on legacy entries */}

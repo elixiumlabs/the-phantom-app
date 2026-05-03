@@ -40,7 +40,6 @@ const PhaseIdentify = memo(() => {
   
   // Resume state
   const [resumeFile, setResumeFile] = useState<File | null>(null)
-  const [resumeText, setResumeText] = useState('')
 
   // Sync Firestore data to local state
   useEffect(() => {
@@ -341,7 +340,6 @@ const PhaseIdentify = memo(() => {
                     
                     try {
                       const text = await file.text()
-                      setResumeText(text)
                       setBackgroundText(prev => {
                         // Remove previous resume content if exists
                         const withoutResume = prev.replace(/Resume content:[\s\S]*?(?=\n\nLinkedIn:|$)/g, '').trim()

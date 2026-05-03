@@ -105,7 +105,7 @@ const SystemStatusPage = memo(() => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut', delay: 0.15 }}
           >
-            {METRICS.map(({ label, value, icon: Icon }, i) => (
+            {METRICS.map(({ label, value, icon: Icon }) => (
               <div key={label} className="card text-center">
                 <Icon className="text-phantom-lime mx-auto mb-3" size={28} />
                 <p className="font-code text-[32px] font-bold text-phantom-text-primary mb-1">{value}</p>

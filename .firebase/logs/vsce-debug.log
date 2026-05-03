@@ -33,3 +33,21 @@
 [debug] [2026-05-01T01:11:34.051Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
 [debug] [2026-05-01T01:11:41.109Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
 [debug] [2026-05-01T01:11:41.111Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2026-05-02T16:56:40.380Z] [Firebase Plugin] Activating Firebase extension.
+[info] [Firebase Plugin] Checked firebase-tools, is up to date!
+[debug] [2026-05-02T16:56:52.108Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2026-05-02T16:56:52.112Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-02T16:56:52.112Z] > authorizing via signed-in user (empressempiresllc@gmail.com)
+[debug] [2026-05-02T16:56:52.115Z] Checked if tokens are valid: false, expires at: 1777687517633
+[debug] [2026-05-02T16:56:52.115Z] Checked if tokens are valid: false, expires at: 1777687517633
+[debug] [2026-05-02T16:56:52.116Z] > refreshing access token with scopes: []
+[debug] [2026-05-02T16:56:52.119Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-05-02T16:56:52.120Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-05-02T16:56:52.845Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-05-02T16:56:52.845Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-05-02T16:56:52.882Z] [Firebase Plugin] User found:  empressempiresllc@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2026-05-02T16:56:52.885Z] Checked if tokens are valid: true, expires at: 1777744611846
+[debug] [2026-05-02T16:56:52.886Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-05-02T16:56:54.048Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-05-02T16:56:54.049Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]

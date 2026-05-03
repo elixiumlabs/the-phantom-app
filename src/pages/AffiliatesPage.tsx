@@ -1,6 +1,6 @@
 import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { DollarSign, Users, TrendingUp, Gift, CheckCircle, ArrowRight, Calculator } from 'lucide-react'
+import { DollarSign, Users, TrendingUp, Gift, ArrowRight, Calculator } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import NavigationDock from '@/components/NavigationDock'
 import FooterSection from '@/components/FooterSection'
