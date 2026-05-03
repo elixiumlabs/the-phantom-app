@@ -72,6 +72,18 @@ const PhaseTest = memo(() => {
     notes: '',
   })
 
+  // Sales page state
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('')
+  const [salesPageData, setSalesPageData] = useState({
+    headline: '',
+    subheadline: '',
+    problem: '',
+    promise: '',
+    proof: '',
+    price: '',
+    cta: '',
+  })
+
   const [completing, setCompleting] = useState(false)
   const [completionError, setCompletionError] = useState<string | null>(null)
 
@@ -87,6 +99,19 @@ const PhaseTest = memo(() => {
     setTargetConversion(silentTest.target_conversion_rate?.toString() ?? '')
     setFailedTestCriteria(silentTest.failed_test_criteria ?? '')
     setParamsConfirmed(!!silentTest.checklist?.parameters_set)
+    
+    // Load sales page data if exists
+    if (silentTest.sales_page) {
+      setSalesPageData({
+        headline: silentTest.sales_page.headline || '',
+        subheadline: silentTest.sales_page.subheadline || '',
+        problem: silentTest.sales_page.problem || '',
+        promise: silentTest.sales_page.promise || '',
+        proof: silentTest.sales_page.proof || '',
+        price: silentTest.sales_page.price || '',
+        cta: silentTest.sales_page.cta || '',
+      })
+    }
   }, [silentTest])
 
   if (!currentProject || !silentTest) {
@@ -177,6 +202,54 @@ const PhaseTest = memo(() => {
     await deleteDoc(doc(db, 'projects', projectId, 'outreach_log', entryId))
   }
 
+  const saveSalesPage = async () => {
+    await setDoc(
+      stRef,
+      {
+        sales_page: salesPageData,
+        'checklist.sales_page_built': !!(salesPageData.headline && salesPageData.problem && salesPageData.cta),
+        updated_at: serverTimestamp(),
+      },
+      { merge: true },
+    )
+  }
+
+  const loadTemplate = (templateName: string) => {
+    setSelectedTemplate(templateName)
+    const templates: Record<string, typeof salesPageData> = {
+      direct: {
+        headline: offerOutcome ? `${offerOutcome} in ${offerDelivery || '[Timeframe]'}` : '[Outcome] in [Timeframe]',
+        subheadline: offerName ? `${offerName} — no fluff, just results` : '[Offer name] — no fluff, just results',
+        problem: 'You are dealing with [specific problem]. You have tried [failed attempts], but nothing sticks. The real issue is [root cause].',
+        promise: `This gets you ${offerOutcome || '[outcome]'} without [what they want to avoid]. Here is what is included:\n${offerIncludesRaw || '• [Deliverable 1]\n• [Deliverable 2]\n• [Deliverable 3]'}`,
+        proof: '[Insert testimonial, case study, or result from Phase 1 testing]\n\n"[Quote from real buyer]" — [Name/Title]',
+        price: offerPrice ? `$${offerPrice} — one-time payment, no subscription` : '$[price] — one-time payment, no subscription',
+        cta: offerName ? `Get ${offerName} now` : 'Get [offer name] now',
+      },
+      problem_first: {
+        headline: 'Still struggling with [specific problem]?',
+        subheadline: 'Here is why [common solution] is not working — and what does',
+        problem: 'Most people in your position try [approach 1], [approach 2], or [approach 3]. None of them work because they ignore [root cause].\n\nThe real problem is not [surface issue] — it is [deeper issue]. Until you fix that, nothing changes.',
+        promise: `${offerName || '[Offer name]'} solves this by ${offerOutcome || '[how it works]'}.\n\nYou get:\n${offerIncludesRaw || '• [Deliverable 1]\n• [Deliverable 2]\n• [Deliverable 3]'}\n\nNo [what they do not want]. Just [what they do want].`,
+        proof: 'This worked for [number] people who had the exact same problem:\n\n"[Specific result quote]" — [Name]\n\n[Additional proof point or metric]',
+        price: offerPrice ? `$${offerPrice}` : '$[price]',
+        cta: 'Fix this now',
+      },
+      transformation: {
+        headline: `From [current state] to [desired state] in ${offerDelivery || '[timeframe]'}`,
+        subheadline: 'The exact system that got [social proof metric]',
+        problem: 'Right now you are [current painful state]. You know you need to get to [desired state], but every time you try, you hit [obstacle].\n\nThat is not your fault. It is because [systemic reason].',
+        promise: `${offerName || '[Offer name]'} is the bridge.\n\nInside:\n${offerIncludesRaw || '• [Deliverable 1] — [benefit]\n• [Deliverable 2] — [benefit]\n• [Deliverable 3] — [benefit]'}\n\nBy the end, you will have ${offerOutcome || '[concrete outcome]'}.`,
+        proof: '[Number] people used this exact process:\n\n• [Name] went from [before] to [after] in [timeframe]\n• [Name] achieved [specific metric]\n• [Name] said: "[quote]"',
+        price: offerPrice ? `Investment: $${offerPrice}` : 'Investment: $[price]',
+        cta: 'Start the transformation',
+      },
+    }
+    if (templates[templateName]) {
+      setSalesPageData(templates[templateName])
+    }
+  }
+
   // ----- Derived stats from live outreach_log (the recompute trigger
   // also writes summary on silent_test, but we render from raw for instant
   // feedback while the trigger catches up) -----
@@ -252,7 +325,7 @@ const PhaseTest = memo(() => {
           run={() => buildMinimumOffer({ project_id: projectId })}
           renderResult={(out) => {
             // Handle nested output structure
-            const data = out.output || out
+            const data = (out as any).output || out
             const drafts = data.drafts || []
             
             if (drafts.length === 0) {
@@ -268,7 +341,7 @@ const PhaseTest = memo(() => {
             return (
             <ProtectedContent watermark disableSelect>
               <div className="space-y-3">
-              {drafts.map((d, i) => (
+              {drafts.map((d: any, i: number) => (
                 <button
                   key={i}
                   type="button"
@@ -498,7 +571,7 @@ const PhaseTest = memo(() => {
           run={() => generateOutreach({ project_id: projectId, platform, channel })}
           renderResult={(out) => {
             // Handle nested output structure
-            const data = out.output || out
+            const data = (out as any).output || out
             const variations = data.variations || []
             const platformNotes = data.platform_notes || data.platformNotes || ''
             
@@ -515,7 +588,7 @@ const PhaseTest = memo(() => {
             return (
             <ProtectedContent watermark disableSelect>
               <div className="space-y-3">
-              {variations.map((v, i) => (
+              {variations.map((v: any, i: number) => (
                 <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
                   <div className="flex items-center justify-between mb-2">
                     <p className="label text-phantom-lime uppercase text-[11px]">{v.variant.replace(/_/g, ' ')}</p>

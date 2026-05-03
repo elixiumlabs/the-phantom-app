@@ -18,7 +18,7 @@ const PHASE_FEATURES = [
     title: 'Identify',
     subtitle: 'Define your positioning before you build',
     icon: Target,
-    image: '/placeholder-identify.jpg',
+    image: 'https://storage.googleapis.com/phantom-app/4K_ultra-wide_cinematic_editorial_photograph_202605030210.jpeg',
     description: 'Start with clarity. The Identify phase forces you to define who you serve, what you refuse, and your sharpest promise — before you write a single line of code or design a single asset.',
     features: [
       {
@@ -44,7 +44,7 @@ const PHASE_FEATURES = [
     title: 'Test',
     subtitle: 'Build the minimum sellable promise',
     icon: TestTube,
-    image: '/placeholder-test.jpg',
+    image: 'https://storage.googleapis.com/phantom-app/4K_cinematic_ultra-wide_editorial_photograph_202605030219.jpeg',
     description: 'Build the smallest version of your offer that someone would pay for today. Not an MVP — an MSP. Test it against cold strangers until it converts. No friends, no followers, no goodwill.',
     features: [
       {
@@ -70,7 +70,7 @@ const PHASE_FEATURES = [
     title: 'Iterate',
     subtitle: 'Change one variable at a time',
     icon: RotateCcw,
-    image: '/placeholder-iterate.jpg',
+    image: 'https://storage.googleapis.com/phantom-app/4K_cinematic_editorial_photograph_in_202605030224.jpeg',
     description: 'Run the offer 10-30 times, changing one variable at a time until the results are predictable. Headline, price, audience, delivery — isolate, test, measure, repeat. No guessing.',
     features: [
       {
@@ -244,7 +244,7 @@ const FeaturesPage = memo(() => {
             </p>
           </motion.div>
 
-          {PHASE_FEATURES.map(({ phase, title, subtitle, icon: Icon, description, features }, phaseIndex) => (
+          {PHASE_FEATURES.map(({ phase, title, subtitle, icon: Icon, image, description, features }, phaseIndex) => (
             <motion.div
               key={phase}
               className="mb-24 last:mb-0"
@@ -274,10 +274,14 @@ const FeaturesPage = memo(() => {
                 <div className={phaseIndex % 2 === 0 ? 'md:order-2' : 'md:order-1'}>
                   <div className="relative rounded-2xl overflow-hidden border border-phantom-border-subtle">
                     <div className="aspect-[4/3] bg-phantom-surface flex items-center justify-center">
-                      <div className="text-center">
-                        <Icon className="text-phantom-lime mx-auto mb-3" size={40} />
-                        <p className="font-ui text-[13px] text-phantom-text-muted">{title} Phase Preview</p>
-                      </div>
+                      {image.startsWith('http') ? (
+                        <img src={image} alt={`${title} Phase Preview`} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-center">
+                          <Icon className="text-phantom-lime mx-auto mb-3" size={40} />
+                          <p className="font-ui text-[13px] text-phantom-text-muted">{title} Phase Preview</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

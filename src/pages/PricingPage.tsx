@@ -76,11 +76,6 @@ const COMPARISON_FEATURES = [
 
 const GUARANTEES = [
   {
-    icon: Shield,
-    title: '14-day free trial',
-    description: 'Test Phantom Pro risk-free. No credit card required.',
-  },
-  {
     icon: TrendingUp,
     title: '30-day money-back',
     description: 'Not satisfied? Full refund within 30 days. No questions asked.',
@@ -89,6 +84,11 @@ const GUARANTEES = [
     icon: Lock,
     title: 'Cancel anytime',
     description: 'No contracts. No commitments. Cancel with one click.',
+  },
+  {
+    icon: Shield,
+    title: 'Secure & private',
+    description: 'Your brand work stays encrypted and private until you launch.',
   },
 ]
 
@@ -141,49 +141,12 @@ const PricingPage = memo(() => {
             transition={{ duration: 0.4, ease: 'easeOut' }}
           >
             <p className="label text-phantom-lime mb-4">Pricing</p>
-            <h1 className="font-display font-bold text-[48px] md:text-[72px] text-phantom-text-primary leading-tight mb-6">
+            <h1 className="font-display font-bold text-[48px] md:text-[56px] text-phantom-text-primary leading-tight mb-6">
               Two plans. Both built for<br />the phantom phase.
             </h1>
             <p className="font-body text-[18px] text-phantom-text-secondary max-w-2xl mx-auto">
               Start free. Upgrade when you're ready to unlock all four phases and scale your validation.
             </p>
-          </motion.div>
-
-          {/* Value Stack */}
-          <motion.div
-            className="mb-16"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: 'easeOut', delay: 0.1 }}
-          >
-            <div className="card bg-phantom-surface-dark border-phantom-lime/20 max-w-2xl mx-auto">
-              <h2 className="font-display font-bold text-[28px] text-phantom-text-primary mb-2 text-center">
-                Total Value: ${totalValue.toLocaleString()}
-              </h2>
-              <p className="font-body text-[14px] text-phantom-text-secondary text-center mb-6">
-                Everything included in Phantom Pro
-              </p>
-              <div className="space-y-3 mb-6">
-                {VALUE_STACK.map(({ item, value }) => (
-                  <div key={item} className="flex items-center justify-between py-2 border-b border-phantom-border-subtle last:border-0">
-                    <span className="font-body text-[14px] text-phantom-text-secondary">{item}</span>
-                    <span className="font-code text-[14px] text-phantom-lime font-medium">{value}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="pt-4 border-t border-phantom-lime/20">
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-[18px] text-phantom-text-primary font-bold">Your Price:</span>
-                  <div className="text-right">
-                    <span className="font-code text-[32px] text-phantom-lime font-bold">${annual ? proAnnualPrice : proMonthlyPrice}</span>
-                    <span className="font-body text-[16px] text-phantom-text-secondary">/month</span>
-                  </div>
-                </div>
-                <p className="font-body text-[13px] text-phantom-text-muted text-center mt-3">
-                  That's {Math.round((1 - (annual ? proAnnualPrice : proMonthlyPrice) * 12 / totalValue) * 100)}% off the total value
-                </p>
-              </div>
-            </div>
           </motion.div>
 
           {/* Toggle */}
@@ -314,10 +277,8 @@ const PricingPage = memo(() => {
                   <><Loader size={14} className="animate-spin" /> Loading...</>
                 ) : user?.plan === 'phantom_pro' ? (
                   'You’re on Pro'
-                ) : user ? (
-                  'Upgrade to Pro'
                 ) : (
-                  'Start 14-day free trial'
+                  'Upgrade to Pro'
                 )}
               </button>
               {checkoutError && (
@@ -363,8 +324,45 @@ const PricingPage = memo(() => {
                 </div>
               </div>
               <p className="font-body text-[13px] text-phantom-text-muted text-center mt-6 pt-6 border-t border-phantom-border-subtle">
-                No card required for trial • Cancel anytime
+                Cancel anytime • 30-day money-back guarantee
               </p>
+            </div>
+          </motion.div>
+
+          {/* Value Stack */}
+          <motion.div
+            className="mb-20"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: 'easeOut', delay: 0.25 }}
+          >
+            <div className="card bg-phantom-surface-dark border-phantom-lime/20 max-w-2xl mx-auto">
+              <h2 className="font-display font-bold text-[28px] text-phantom-text-primary mb-2 text-center">
+                Total Value: ${totalValue.toLocaleString()}
+              </h2>
+              <p className="font-body text-[14px] text-phantom-text-secondary text-center mb-6">
+                Everything included in Phantom Pro
+              </p>
+              <div className="space-y-3 mb-6">
+                {VALUE_STACK.map(({ item, value }) => (
+                  <div key={item} className="flex items-center justify-between py-2 border-b border-phantom-border-subtle last:border-0">
+                    <span className="font-body text-[14px] text-phantom-text-secondary">{item}</span>
+                    <span className="font-code text-[14px] text-phantom-lime font-medium">{value}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-4 border-t border-phantom-lime/20">
+                <div className="flex items-center justify-between">
+                  <span className="font-display text-[18px] text-phantom-text-primary font-bold">Your Price:</span>
+                  <div className="text-right">
+                    <span className="font-code text-[32px] text-phantom-lime font-bold">${annual ? proAnnualPrice : proMonthlyPrice}</span>
+                    <span className="font-body text-[16px] text-phantom-text-secondary">/month</span>
+                  </div>
+                </div>
+                <p className="font-body text-[13px] text-phantom-text-muted text-center mt-3">
+                  That's {Math.round((1 - (annual ? proAnnualPrice : proMonthlyPrice) * 12 / totalValue) * 100)}% off the total value
+                </p>
+              </div>
             </div>
           </motion.div>
 
@@ -485,10 +483,10 @@ const PricingPage = memo(() => {
               </div>
               <div className="card">
                 <h3 className="font-display font-semibold text-[18px] text-phantom-text-primary mb-3">
-                  What happens after the free trial?
+                  When will I be charged?
                 </h3>
                 <p className="font-body text-[15px] text-phantom-text-secondary leading-relaxed">
-                  After 14 days, you'll be charged for your chosen plan. Cancel anytime during the trial and you won't be charged. No credit card required to start.
+                  You'll be charged immediately when you upgrade to Pro. Cancel anytime and you won't be charged for the next billing period.
                 </p>
               </div>
               <div className="card">
@@ -526,14 +524,14 @@ const PricingPage = memo(() => {
               </p>
               <div className="flex items-center justify-center gap-4 flex-wrap">
                 <Link to="/signup" className="btn-primary">
-                  Start 14-day free trial
+                  Get started now
                 </Link>
                 <Link to="/features" className="btn-secondary">
                   See all features
                 </Link>
               </div>
               <p className="font-body text-[13px] text-phantom-text-muted mt-6">
-                No credit card required • Cancel anytime • 30-day money-back guarantee
+                Cancel anytime • 30-day money-back guarantee
               </p>
             </div>
           </motion.div>

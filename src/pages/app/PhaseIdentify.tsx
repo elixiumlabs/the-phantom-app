@@ -33,6 +33,7 @@ const PhaseIdentify = memo(() => {
   const [workingName, setWorkingName] = useState('')
   const [selectedPositioning, setSelectedPositioning] = useState('')
   const [selectedVoice, setSelectedVoice] = useState<string[]>([])
+  const [antiCustomers, setAntiCustomers] = useState<string[]>([])
 
   // AI loading states
   const [refiningProblem, setRefiningProblem] = useState(false)
@@ -55,6 +56,7 @@ const PhaseIdentify = memo(() => {
       setWorkingName(ghostIdentity.working_name || '')
       setSelectedPositioning(ghostIdentity.positioning_statement || '')
       setSelectedVoice(ghostIdentity.voice_adjectives || [])
+      setAntiCustomers(ghostIdentity.anti_customers || [])
     }
   }, [ghostIdentity])
 
@@ -169,6 +171,15 @@ const PhaseIdentify = memo(() => {
     alert('Positioning selections saved successfully!')
   }
 
+  const saveAntiCustomers = async (customers: string[]) => {
+    await updateDoc(projectRef, {
+      anti_customers: customers,
+      'checklist.anti_customers_defined': customers.length >= 2,
+      updated_at: new Date().toISOString(),
+    })
+    setAntiCustomers(customers)
+  }
+
   // ========================================
   // COMPLETE PHASE
   // ========================================
@@ -197,7 +208,8 @@ const PhaseIdentify = memo(() => {
     checklist.problem_written &&
     checklist.advantages_mapped &&
     checklist.positioning_written &&
-    checklist.voice_defined
+    checklist.voice_defined &&
+    checklist.anti_customers_defined
 
   return (
     <motion.div
@@ -595,7 +607,77 @@ const PhaseIdentify = memo(() => {
         )}
       </div>
 
-      {/* Section 4 — Audience Language (PRO) */}
+      {/* Section 4 — Anti-Customer Definition */}
+      <div className="card mb-6">
+        <p className="label mb-4">Anti-Customer Definition</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
+          Name who this is NOT for. The fastest way to sharpen positioning is to say no before you say yes. Define at least 2 types of people you will refuse to serve.
+        </p>
+
+        <div className="space-y-3 mb-4">
+          {antiCustomers.map((customer, i) => (
+            <div key={i} className="flex items-start gap-3 p-3 rounded border border-phantom-border bg-phantom-black/20">
+              <div className="flex-1">
+                <p className="font-body text-[14px] text-phantom-text-primary">{customer}</p>
+              </div>
+              <button
+                onClick={() => saveAntiCustomers(antiCustomers.filter((_, idx) => idx !== i))}
+                className="text-phantom-text-muted hover:text-phantom-danger transition-colors text-[12px]"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <input
+            className="input flex-1"
+            placeholder="e.g. People who want done-for-you solutions without doing any work"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                const newCustomer = e.currentTarget.value.trim()
+                saveAntiCustomers([...antiCustomers, newCustomer])
+                e.currentTarget.value = ''
+              }
+            }}
+          />
+          <button
+            className="btn-secondary"
+            onClick={(e) => {
+              const input = e.currentTarget.previousElementSibling as HTMLInputElement
+              if (input.value.trim()) {
+                const newCustomer = input.value.trim()
+                saveAntiCustomers([...antiCustomers, newCustomer])
+                input.value = ''
+              }
+            }}
+          >
+            Add
+          </button>
+        </div>
+
+        <div className="mt-4 p-3 bg-phantom-black/40 border border-phantom-border-subtle rounded">
+          <p className="font-body text-[12px] text-phantom-text-secondary mb-2">Examples of anti-customers:</p>
+          <ul className="space-y-1">
+            <li className="font-body text-[11px] text-phantom-text-muted">• People who need hand-holding through every step</li>
+            <li className="font-body text-[11px] text-phantom-text-muted">• Businesses with less than $10k/month revenue</li>
+            <li className="font-body text-[11px] text-phantom-text-muted">• Anyone looking for a quick fix or magic bullet</li>
+            <li className="font-body text-[11px] text-phantom-text-muted">• Teams that aren't willing to change their process</li>
+          </ul>
+        </div>
+
+        {antiCustomers.length >= 2 && (
+          <div className="mt-4 p-3 bg-phantom-lime/10 border border-phantom-lime/30 rounded flex items-start gap-2">
+            <CheckCircle className="text-phantom-lime shrink-0 mt-0.5" size={16} />
+            <p className="font-body text-[13px] text-phantom-lime">
+              Anti-customers defined. Your positioning is now sharper.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Section 5 — Audience Language (PRO) */}
       <div className="card mb-6">
         <p className="label mb-2">Step 4 — Audience Language</p>
         <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
@@ -631,7 +713,7 @@ const PhaseIdentify = memo(() => {
             console.log('Audience language response:', out)
             
             // Safely handle the response - check if data is nested in 'output'
-            const data = out.output || out
+            const data = (out as any).output || out
             
             if (!data) return <p className="font-body text-[13px] text-phantom-text-muted">No results returned.</p>
             
@@ -674,7 +756,7 @@ const PhaseIdentify = memo(() => {
               <div>
                 <p className="label text-phantom-lime mb-2">Problem phrases</p>
                 <div className="flex flex-wrap gap-2">
-                  {problemPhrases.map((p, i) => (
+                  {problemPhrases.map((p: string, i: number) => (
                     <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-black/40 border border-phantom-border-subtle rounded">
                       {p}
                     </span>
@@ -686,7 +768,7 @@ const PhaseIdentify = memo(() => {
               <div>
                 <p className="label text-phantom-lime mb-2">Emotional descriptors</p>
                 <div className="flex flex-wrap gap-2">
-                  {emotionalDescriptors.map((p, i) => (
+                  {emotionalDescriptors.map((p: string, i: number) => (
                     <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-black/40 border border-phantom-border-subtle rounded">
                       {p}
                     </span>
@@ -698,7 +780,7 @@ const PhaseIdentify = memo(() => {
               <div>
                 <p className="label text-phantom-lime mb-2">Failed attempt phrases</p>
                 <div className="flex flex-wrap gap-2">
-                  {failedAttemptPhrases.map((p, i) => (
+                  {failedAttemptPhrases.map((p: string, i: number) => (
                     <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-black/40 border border-phantom-border-subtle rounded">
                       {p}
                     </span>
@@ -710,7 +792,7 @@ const PhaseIdentify = memo(() => {
               <div>
                 <p className="label text-phantom-lime mb-2">Outcome phrases</p>
                 <div className="flex flex-wrap gap-2">
-                  {outcomePhrases.map((p, i) => (
+                  {outcomePhrases.map((p: string, i: number) => (
                     <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-black/40 border border-phantom-border-subtle rounded">
                       {p}
                     </span>
@@ -722,7 +804,7 @@ const PhaseIdentify = memo(() => {
               <div>
                 <p className="label text-phantom-lime mb-2">Jargon to avoid</p>
                 <div className="flex flex-wrap gap-2">
-                  {jargonToAvoid.map((p, i) => (
+                  {jargonToAvoid.map((p: string, i: number) => (
                     <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-danger/10 border border-phantom-danger/30 rounded text-phantom-danger">
                       {p}
                     </span>
@@ -734,7 +816,7 @@ const PhaseIdentify = memo(() => {
               <div>
                 <p className="label text-phantom-lime mb-2">Verbatim examples</p>
                 <div className="space-y-2">
-                  {examples.map((ex, i) => (
+                  {examples.map((ex: any, i: number) => (
                     <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
                       <p className="font-body text-[13px] text-phantom-text-primary mb-1">"{ex.verbatim}"</p>
                       <p className="font-body text-[11px] text-phantom-text-muted">{ex.whereSaid}</p>
@@ -752,7 +834,7 @@ const PhaseIdentify = memo(() => {
         />
       </div>
 
-      {/* Section 5 — Where To Test */}
+      {/* Section 6 — Where To Test */}
       <div className="card mb-6">
         <p className="label mb-2">Step 5 — Where To Test</p>
         <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
@@ -774,7 +856,7 @@ const PhaseIdentify = memo(() => {
           }
           renderResult={(out) => {
             // Handle nested output structure
-            const data = out.output || out
+            const data = (out as any).output || out
             
             if (!data || !data.locations) {
               return (
@@ -795,7 +877,7 @@ const PhaseIdentify = memo(() => {
               <div>
                 <p className="label text-phantom-lime mb-2">Top communities</p>
                 <div className="space-y-2">
-                  {locations.map((loc, i) => (
+                  {locations.map((loc: any, i: number) => (
                     <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
                       <div className="flex items-start justify-between gap-3 mb-1">
                         <div>
@@ -829,7 +911,7 @@ const PhaseIdentify = memo(() => {
               <div>
                 <p className="label text-phantom-lime mb-2">Search queries to find more</p>
                 <div className="space-y-1">
-                  {searchQueries.map((q, i) => (
+                  {searchQueries.map((q: string, i: number) => (
                     <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded px-3 py-2">
                       <p className="font-code text-[12px] text-phantom-text-secondary">{q}</p>
                     </div>
@@ -860,6 +942,7 @@ const PhaseIdentify = memo(() => {
             { label: 'Minimum 3 unfair advantages selected', done: checklist.advantages_mapped },
             { label: 'Positioning statement selected', done: checklist.positioning_written },
             { label: 'Voice adjectives selected', done: checklist.voice_defined },
+            { label: 'At least 2 anti-customers defined', done: checklist.anti_customers_defined },
           ].map(({ label, done }) => (
             <div key={label} className="flex items-center gap-3">
               <div

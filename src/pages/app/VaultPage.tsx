@@ -117,7 +117,7 @@ const VaultPage = memo(() => {
         const date =
           formType === 'revenue' ? resultForm.date :
           formType === 'testimonial' ? testimonialForm.dateCollected :
-          ''
+          null
         
         await updateDoc(doc(db, 'proof_vault', editingItem.id), {
           title: deriveTitle(formType, { resultForm, testimonialForm, caseForm }),
@@ -159,7 +159,7 @@ const VaultPage = memo(() => {
         const date =
           formType === 'revenue' ? resultForm.date :
           formType === 'testimonial' ? testimonialForm.dateCollected :
-          ''
+          null
         await addDoc(collection(db, 'proof_vault'), {
           user_id: user.id,
           project_id: projectId,

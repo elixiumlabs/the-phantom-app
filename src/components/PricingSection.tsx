@@ -167,12 +167,8 @@ const PricingSection = memo(() => {
             </ul>
 
             <Link to="/signup" className="btn-primary w-full text-center">
-              Start Pro free for 14 days
+              Get Phantom Pro
             </Link>
-
-            <p className="font-body text-[13px] text-phantom-text-muted text-center mt-3">
-              Cancel anytime. No card required for trial.
-            </p>
           </motion.div>
         </div>
       </div>

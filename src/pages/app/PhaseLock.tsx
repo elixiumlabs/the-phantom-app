@@ -23,7 +23,6 @@ const VISUAL_DIRECTIONS = ['minimal', 'editorial', 'bold', 'warm', 'technical', 
 
 const PhaseLock = memo(() => {
   const { id } = useParams()
-  const navigate = useNavigate()
   const projectId = id!
   const { currentProject, lockIn } = useProjects()
   const { items: vaultItems } = useVault(projectId)

@@ -37,6 +37,7 @@ import TermsOfServicePage from '@/pages/TermsOfServicePage'
 import CookiePolicyPage from '@/pages/CookiePolicyPage'
 import FeaturesPage from '@/pages/FeaturesPage'
 import PricingPage from '@/pages/PricingPage'
+import HowItWorksPage from '@/pages/HowItWorksPage'
 import SystemStatusPage from '@/pages/SystemStatusPage'
 import AffiliatesPage from '@/pages/AffiliatesPage'
 import DiagnosticPage from '@/pages/DiagnosticPage'
@@ -148,6 +149,7 @@ const AppRoutes = memo(() => (
 
     <Route path="/blog" element={<BlogPage />} />
     <Route path="/features" element={<FeaturesPage />} />
+    <Route path="/how-it-works" element={<HowItWorksPage />} />
     <Route path="/pricing" element={<PricingPage />} />
     <Route path="/status" element={<SystemStatusPage />} />
     <Route path="/affiliates" element={<AffiliatesPage />} />
