@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects, type Project } from '@/contexts/ProjectContext'
 import AppSidebar from '@/components/app/AppSidebar'
-import { completeOnboarding, deleteProject, createProject } from '@/lib/functions'
+import { deleteProject, createProject } from '@/lib/functions'
 import { useProtection } from '@/hooks'
 
 const PHASE_LABELS: Record<number, string> = {

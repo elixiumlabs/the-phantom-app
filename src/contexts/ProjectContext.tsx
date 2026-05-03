@@ -72,6 +72,7 @@ export interface SilentTest {
     total: number
     responded: number
     converted: number
+    conversions?: number
     response_rate: number
     conversion_rate: number
     top_objection: string | null
@@ -82,6 +83,7 @@ export interface SilentTest {
     outreach_30: boolean
     data_recorded: boolean
     objections_documented: boolean
+    sales_page_built?: boolean
   }
   sales_page?: {
     headline: string
