@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from 'react'
-import { Sparkles, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Sparkles, Send } from 'lucide-react'
 import { motion } from 'framer-motion'
 import AppSidebar from '@/components/app/AppSidebar'
 
@@ -37,85 +37,115 @@ function evaluateBrandDraft(input: string) {
 
 const AIBrandAssistantPage = memo(() => {
   const [draft, setDraft] = useState('')
+  const [submittedDraft, setSubmittedDraft] = useState('')
 
-  const analysis = useMemo(() => evaluateBrandDraft(draft), [draft])
+  const analysis = useMemo(() => evaluateBrandDraft(submittedDraft), [submittedDraft])
+
+  const submit = () => {
+    if (!draft.trim()) return
+    setSubmittedDraft(draft.trim())
+    setDraft('')
+  }
 
   return (
     <div className="flex min-h-screen bg-phantom-black">
       <AppSidebar />
-      <main className="flex-1 ml-60 p-10 overflow-y-auto">
+      <main className="flex-1 ml-60 h-screen flex flex-col">
         <motion.div
+          className="px-8 pt-8 pb-4 border-b border-phantom-border-subtle"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
         >
-          <div className="mb-8">
-            <h1 className="font-display font-bold text-[28px] text-phantom-text-primary mb-1">
+          <div>
+            <h1 className="font-display font-bold text-[24px] text-phantom-text-primary mb-1">
               AI Brand Assistant
             </h1>
-            <p className="font-body text-[14px] text-phantom-text-secondary">
-              Get instant feedback on positioning clarity, offer framing, and message strength before you publish.
+            <p className="font-body text-[13px] text-phantom-text-secondary">
+              Chat-style feedback on your positioning and offer messaging.
             </p>
           </div>
+        </motion.div>
 
-          <div className="grid lg:grid-cols-2 gap-6">
-            <div className="card">
-              <p className="label text-phantom-lime mb-3">Draft your positioning</p>
-              <textarea
-                className="input min-h-[240px]"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Paste your current positioning/offer message here..."
-              />
-              <p className="font-body text-[12px] text-phantom-text-muted mt-3">
-                Tip: Include audience, specific problem, and measurable outcome.
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-5">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-phantom-lime/20 border border-phantom-lime/40 flex items-center justify-center shrink-0">
+              <Sparkles size={14} className="text-phantom-lime" />
+            </div>
+            <div className="max-w-3xl rounded-2xl rounded-tl-md bg-[#111] border border-phantom-border-subtle p-4">
+              <p className="font-body text-[13px] text-phantom-text-secondary leading-relaxed">
+                Paste a positioning or offer draft and I’ll review it like a brand strategist. I’ll flag what’s strong, what’s weak, and what to tighten.
               </p>
             </div>
-
-            <div className="space-y-4">
-              <div className="card">
-                <p className="label mb-3 flex items-center gap-2"><Sparkles size={13} /> Assistant feedback</p>
-                {draft.trim().length === 0 ? (
-                  <p className="font-body text-[13px] text-phantom-text-secondary">
-                    Start by pasting a draft. I’ll flag weak spots and confirm strong signals.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <p className="font-ui text-[11px] uppercase tracking-wider text-phantom-text-muted mb-2">Strengths</p>
-                      <div className="space-y-2">
-                        {analysis.strengths.length === 0 ? (
-                          <p className="font-body text-[13px] text-phantom-text-muted">No clear strengths yet.</p>
-                        ) : (
-                          analysis.strengths.map((s) => (
-                            <p key={s} className="font-body text-[13px] text-phantom-text-secondary flex items-start gap-2">
-                              <CheckCircle2 size={14} className="text-phantom-lime mt-0.5" /> {s}
-                            </p>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="font-ui text-[11px] uppercase tracking-wider text-phantom-text-muted mb-2">Gaps to fix</p>
-                      <div className="space-y-2">
-                        {analysis.issues.length === 0 ? (
-                          <p className="font-body text-[13px] text-phantom-lime">No obvious issues detected.</p>
-                        ) : (
-                          analysis.issues.map((i) => (
-                            <p key={i} className="font-body text-[13px] text-phantom-text-secondary flex items-start gap-2">
-                              <AlertTriangle size={14} className="text-phantom-warning mt-0.5" /> {i}
-                            </p>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
-        </motion.div>
+
+          {submittedDraft && (
+            <>
+              <div className="flex items-start justify-end gap-3">
+                <div className="max-w-3xl rounded-2xl rounded-tr-md bg-phantom-lime/15 border border-phantom-lime/30 p-4">
+                  <p className="font-body text-[13px] text-phantom-text-primary whitespace-pre-wrap leading-relaxed">
+                    {submittedDraft}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-phantom-lime/20 border border-phantom-lime/40 flex items-center justify-center shrink-0">
+                  <Sparkles size={14} className="text-phantom-lime" />
+                </div>
+                <div className="max-w-3xl rounded-2xl rounded-tl-md bg-[#111] border border-phantom-border-subtle p-4 space-y-3">
+                  <p className="font-ui text-[11px] uppercase tracking-wider text-phantom-text-muted">Assistant feedback</p>
+
+                  <div>
+                    <p className="font-ui text-[11px] uppercase tracking-wider text-phantom-text-muted mb-1.5">Strengths</p>
+                    {analysis.strengths.length === 0 ? (
+                      <p className="font-body text-[13px] text-phantom-text-muted">No clear strengths detected yet.</p>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {analysis.strengths.map((s) => (
+                          <li key={s} className="font-body text-[13px] text-phantom-text-secondary">• {s}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="font-ui text-[11px] uppercase tracking-wider text-phantom-text-muted mb-1.5">What to fix next</p>
+                    {analysis.issues.length === 0 ? (
+                      <p className="font-body text-[13px] text-phantom-lime">No major issues detected. This is strong enough to test.</p>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {analysis.issues.map((i) => (
+                          <li key={i} className="font-body text-[13px] text-phantom-text-secondary">• {i}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="px-8 py-4 border-t border-phantom-border-subtle bg-[#0d0d0d]">
+          <div className="max-w-4xl mx-auto flex gap-3">
+            <textarea
+              className="input min-h-[52px] max-h-36 resize-y"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Message AI Brand Assistant..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  submit()
+                }
+              }}
+            />
+            <button className="btn-primary self-end" onClick={submit} disabled={!draft.trim()}>
+              <Send size={14} /> Send
+            </button>
+          </div>
+        </div>
       </main>
     </div>
   )

@@ -1,16 +1,62 @@
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { TrendingUp, Repeat, Database, Activity } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { collectionGroup, onSnapshot, query, where, type DocumentData, type Unsubscribe } from 'firebase/firestore'
+import { useAuth } from '@/contexts/AuthContext'
 import { useProjects } from '@/contexts/ProjectContext'
+import { db } from '@/lib/firebase'
 import AppSidebar from '@/components/app/AppSidebar'
 
+interface OutreachRow {
+  id: string
+  project_id: string
+  responded: boolean
+  converted: boolean
+}
+
 const ValidationDashboardPage = memo(() => {
-  const { projects, outreachLog, proofVault } = useProjects()
+  const { user } = useAuth()
+  const { projects, proofVault } = useProjects()
+  const [rows, setRows] = useState<OutreachRow[]>([])
+
+  useEffect(() => {
+    if (!user) {
+      setRows([])
+      return
+    }
+
+    if (projects.length === 0) {
+      setRows([])
+      return
+    }
+
+    const projectIds = projects.slice(0, 30).map((p) => p.id)
+    const q = query(
+      collectionGroup(db, 'outreach_log'),
+      where('project_id', 'in', projectIds),
+    )
+
+    const unsub: Unsubscribe = onSnapshot(q, (snap) => {
+      setRows(
+        snap.docs.map((d) => {
+          const data = d.data() as DocumentData
+          return {
+            id: d.id,
+            project_id: data.project_id ?? d.ref.parent.parent?.id ?? '',
+            responded: !!data.responded,
+            converted: !!data.converted,
+          }
+        }),
+      )
+    })
+
+    return () => unsub()
+  }, [user, projects])
 
   const activeProjects = projects.filter((p) => p.status === 'active')
-  const totalOutreach = outreachLog.length
-  const totalConversions = outreachLog.filter((o) => o.converted).length
-  const totalReplies = outreachLog.filter((o) => o.responded).length
+  const totalOutreach = rows.length
+  const totalConversions = rows.filter((o) => o.converted).length
+  const totalReplies = rows.filter((o) => o.responded).length
   const totalProof = proofVault.length
 
   const conversionRate = totalOutreach > 0 ? ((totalConversions / totalOutreach) * 100).toFixed(1) : '0.0'
