@@ -41,6 +41,7 @@ import HowItWorksPage from '@/pages/HowItWorksPage'
 import SystemStatusPage from '@/pages/SystemStatusPage'
 import AffiliatesPage from '@/pages/AffiliatesPage'
 import DiagnosticPage from '@/pages/DiagnosticPage'
+import IntegrationsHelpPage from '@/pages/IntegrationsHelpPage'
 
 const LandingPage = memo(() => (
   <div className="relative min-h-screen">
@@ -158,6 +159,7 @@ const AppRoutes = memo(() => (
     <Route path="/terms-of-service" element={<TermsOfServicePage />} />
     <Route path="/cookie-policy" element={<CookiePolicyPage />} />
     <Route path="/diagnostic" element={<DiagnosticPage />} />
+    <Route path="/help/integrations" element={<IntegrationsHelpPage />} />
 
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>

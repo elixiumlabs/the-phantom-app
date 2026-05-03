@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 export type Phase = 'identify' | 'test' | 'iterate' | 'lock' | 'complete'
 export type SignalType = 'reply' | 'conversion' | 'objection' | 'no_response'
 export type IterationStatus = 'testing' | 'complete' | 'abandoned'
-export type ProofType = 'result' | 'testimonial' | 'case_study' | 'screenshot'
+export type ProofType = 'result' | 'testimonial' | 'case_study' | 'screenshot' | 'landing_page_test' | 'ad_performance' | 'survey_data' | 'preorder_campaign' | 'competitor_analysis' | 'market_research'
 
 export interface Signal {
   id: string

@@ -1,6 +1,7 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth'
 import { getFirestore, type Firestore } from 'firebase/firestore'
+import { getFunctions, type Functions } from 'firebase/functions'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,6 +19,7 @@ export const isFirebaseConfigured = Boolean(
 let _app: FirebaseApp | null = null
 let _auth: Auth | null = null
 let _db: Firestore | null = null
+let _fns: Functions | null = null
 let _googleProvider: GoogleAuthProvider | null = null
 
 if (isFirebaseConfigured) {
@@ -25,6 +27,7 @@ if (isFirebaseConfigured) {
     _app = initializeApp(firebaseConfig)
     _auth = getAuth(_app)
     _db = getFirestore(_app)
+    _fns = getFunctions(_app)
     _googleProvider = new GoogleAuthProvider()
     _googleProvider.setCustomParameters({ prompt: 'select_account' })
   } catch (err) {
@@ -43,4 +46,5 @@ if (isFirebaseConfigured) {
 export const app = _app as FirebaseApp
 export const auth = _auth as Auth
 export const db = _db as Firestore
+export const fns = _fns as Functions
 export const googleProvider = _googleProvider as GoogleAuthProvider

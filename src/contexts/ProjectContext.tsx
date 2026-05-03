@@ -172,7 +172,7 @@ export interface ProofVaultItem {
   id: string
   user_id: string
   project_id: string
-  proof_type: 'screenshot' | 'testimonial' | 'case_study' | 'revenue' | 'conversion_data'
+  proof_type: 'screenshot' | 'testimonial' | 'case_study' | 'revenue' | 'conversion_data' | 'landing_page_test' | 'ad_performance' | 'survey_data' | 'preorder_campaign' | 'competitor_analysis' | 'market_research'
   title: string
   content: string
   file_url?: string

@@ -1,30 +1,43 @@
 import { memo, useMemo, useRef, useState } from 'react'
-import { Plus, Trash2, TrendingUp, MessageSquare, FileText, Camera, Filter, Upload, Loader, ExternalLink, Edit2 } from 'lucide-react'
+import { Plus, Trash2, TrendingUp, MessageSquare, FileText, Camera, Filter, Upload, Loader, ExternalLink, Edit2, Link as LinkIcon, Copy, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { addDoc, collection, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects, type ProofVaultItem } from '@/contexts/ProjectContext'
 import { useVault } from '@/hooks'
 import { db } from '@/lib/firebase'
-import { requestProofUploadUrl } from '@/lib/functions'
+import { requestProofUploadUrl, getIntegrationAuthUrl } from '@/lib/functions'
+import { generateWebhookKey } from '@/lib/webhook'
 import AppSidebar from '@/components/app/AppSidebar'
 
 type BackendProofType = ProofVaultItem['proof_type']
 
 const TYPE_LABELS: Record<BackendProofType, string> = {
-  revenue:         'Result',
-  testimonial:     'Testimonial',
-  case_study:      'Case Study',
-  screenshot:      'Screenshot',
-  conversion_data: 'Conversion Data',
+  revenue:              'Result',
+  testimonial:          'Testimonial',
+  case_study:           'Case Study',
+  screenshot:           'Screenshot',
+  conversion_data:      'Conversion Data',
+  landing_page_test:    'Landing Page Test',
+  ad_performance:       'Ad Performance',
+  survey_data:          'Survey Data',
+  preorder_campaign:    'Pre-order Campaign',
+  competitor_analysis:  'Competitor Analysis',
+  market_research:      'Market Research',
 }
 
 const TYPE_BADGE: Record<BackendProofType, string> = {
-  revenue:         'badge badge-active',
-  testimonial:     'badge',
-  case_study:      'badge',
-  screenshot:      'badge',
-  conversion_data: 'badge',
+  revenue:              'badge badge-active',
+  testimonial:          'badge',
+  case_study:           'badge',
+  screenshot:           'badge',
+  conversion_data:      'badge',
+  landing_page_test:    'badge badge-active',
+  ad_performance:       'badge badge-active',
+  survey_data:          'badge',
+  preorder_campaign:    'badge badge-active',
+  competitor_analysis:  'badge',
+  market_research:      'badge',
 }
 
 const ALLOWED_FILE = /^(image\/.+|application\/pdf|text\/csv)$/
@@ -55,7 +68,19 @@ const VaultPage = memo(() => {
   const [testimonialForm, setTestimonialForm] = useState({ quote: '', attribution: '', dateCollected: '' })
   const [caseForm, setCaseForm] = useState({ beforeState: '', whatWasDone: '', afterState: '', timeline: '' })
   const [screenshotForm, setScreenshotForm] = useState({ title: '', notes: '' })
+  const [landingPageForm, setLandingPageForm] = useState({ conversionRate: '', visitors: '', signups: '', adSpend: '', context: '' })
+  const [adPerformanceForm, setAdPerformanceForm] = useState({ platform: '', spend: '', impressions: '', clicks: '', conversions: '', ctr: '', cpa: '' })
+  const [surveyForm, setSurveyForm] = useState({ question: '', responses: '', keyFinding: '', sampleSize: '' })
+  const [preorderForm, setPreorderForm] = useState({ revenue: '', orders: '', avgOrderValue: '', timeframe: '', source: '' })
+  const [competitorForm, setCompetitorForm] = useState({ competitor: '', finding: '', source: '', implication: '' })
+  const [marketResearchForm, setMarketResearchForm] = useState({ topic: '', finding: '', source: '', date: '' })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [showWebhook, setShowWebhook] = useState(false)
+  const [integrationMode, setIntegrationMode] = useState<'oauth' | 'webhook'>('oauth')
+  const [webhookData, setWebhookData] = useState<{ key: string; url: string } | null>(null)
+  const [webhookLoading, setWebhookLoading] = useState(false)
+  const [copied, setCopied] = useState<'key' | 'url' | null>(null)
+  const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     return items
@@ -87,6 +112,12 @@ const VaultPage = memo(() => {
     setTestimonialForm({ quote: '', attribution: '', dateCollected: '' })
     setCaseForm({ beforeState: '', whatWasDone: '', afterState: '', timeline: '' })
     setScreenshotForm({ title: '', notes: '' })
+    setLandingPageForm({ conversionRate: '', visitors: '', signups: '', adSpend: '', context: '' })
+    setAdPerformanceForm({ platform: '', spend: '', impressions: '', clicks: '', conversions: '', ctr: '', cpa: '' })
+    setSurveyForm({ question: '', responses: '', keyFinding: '', sampleSize: '' })
+    setPreorderForm({ revenue: '', orders: '', avgOrderValue: '', timeframe: '', source: '' })
+    setCompetitorForm({ competitor: '', finding: '', source: '', implication: '' })
+    setMarketResearchForm({ topic: '', finding: '', source: '', date: '' })
     setSelectedFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
     setError(null)
@@ -100,6 +131,12 @@ const VaultPage = memo(() => {
     if (formType === 'testimonial') return testimonialForm.quote.trim().length > 0
     if (formType === 'case_study') return caseForm.beforeState.trim().length > 0
     if (formType === 'screenshot') return screenshotForm.title.trim().length > 0 && selectedFile !== null
+    if (formType === 'landing_page_test') return landingPageForm.conversionRate.trim().length > 0
+    if (formType === 'ad_performance') return adPerformanceForm.platform.trim().length > 0 && adPerformanceForm.spend.trim().length > 0
+    if (formType === 'survey_data') return surveyForm.question.trim().length > 0 && surveyForm.keyFinding.trim().length > 0
+    if (formType === 'preorder_campaign') return preorderForm.revenue.trim().length > 0
+    if (formType === 'competitor_analysis') return competitorForm.competitor.trim().length > 0 && competitorForm.finding.trim().length > 0
+    if (formType === 'market_research') return marketResearchForm.topic.trim().length > 0 && marketResearchForm.finding.trim().length > 0
     return false
   }
 
@@ -111,7 +148,7 @@ const VaultPage = memo(() => {
     try {
       if (editingItem) {
         // Update existing item
-        const content = formatContent(formType, { resultForm, testimonialForm, caseForm })
+        const content = formatContent(formType, { resultForm, testimonialForm, caseForm, landingPageForm, adPerformanceForm, surveyForm, preorderForm, competitorForm, marketResearchForm })
         const amount =
           formType === 'revenue' && resultForm.metric ? extractAmount(resultForm.metric) : null
         const date =
@@ -120,7 +157,7 @@ const VaultPage = memo(() => {
           null
         
         await updateDoc(doc(db, 'proof_vault', editingItem.id), {
-          title: deriveTitle(formType, { resultForm, testimonialForm, caseForm }),
+          title: deriveTitle(formType, { resultForm, testimonialForm, caseForm, landingPageForm, adPerformanceForm, surveyForm, preorderForm, competitorForm, marketResearchForm }),
           content,
           amount,
           source: formType === 'testimonial' ? testimonialForm.attribution || null : null,
@@ -153,7 +190,7 @@ const VaultPage = memo(() => {
         if (!res.ok) throw new Error(`Upload failed (${res.status})`)
         // The onFinalize trigger will create the proof_vault doc.
       } else {
-        const content = formatContent(formType, { resultForm, testimonialForm, caseForm })
+        const content = formatContent(formType, { resultForm, testimonialForm, caseForm, landingPageForm, adPerformanceForm, surveyForm, preorderForm, competitorForm, marketResearchForm })
         const amount =
           formType === 'revenue' && resultForm.metric ? extractAmount(resultForm.metric) : null
         const date =
@@ -164,7 +201,7 @@ const VaultPage = memo(() => {
           user_id: user.id,
           project_id: projectId,
           proof_type: formType,
-          title: deriveTitle(formType, { resultForm, testimonialForm, caseForm }),
+          title: deriveTitle(formType, { resultForm, testimonialForm, caseForm, landingPageForm, adPerformanceForm, surveyForm, preorderForm, competitorForm, marketResearchForm }),
           content,
           amount,
           source: formType === 'testimonial' ? testimonialForm.attribution || null : null,
@@ -230,6 +267,45 @@ const VaultPage = memo(() => {
     }
   }
 
+  const handleGenerateWebhook = async () => {
+    setWebhookLoading(true)
+    try {
+      const result = await generateWebhookKey({ regenerate: !!webhookData })
+      setWebhookData({
+        key: result.data.webhook_key,
+        url: result.data.webhook_url,
+      })
+    } catch (err) {
+      console.error('[phantom] webhook generation failed:', err)
+      setError(err instanceof Error ? err.message : 'Failed to generate webhook')
+    } finally {
+      setWebhookLoading(false)
+    }
+  }
+
+  const copyToClipboard = async (text: string, type: 'key' | 'url') => {
+    await navigator.clipboard.writeText(text)
+    setCopied(type)
+    setTimeout(() => setCopied(null), 2000)
+  }
+
+  const handleConnectPlatform = async (platform: 'typeform' | 'stripe') => {
+    if (!projectId || userProjects.length === 0) {
+      setError('Please select a project first')
+      return
+    }
+    
+    setConnectingPlatform(platform)
+    try {
+      const result = await getIntegrationAuthUrl({ platform, project_id: projectId })
+      window.location.href = result.auth_url
+    } catch (err) {
+      console.error('[phantom] integration auth failed:', err)
+      setError(err instanceof Error ? err.message : 'Failed to connect platform')
+      setConnectingPlatform(null)
+    }
+  }
+
   return (
     <div className="flex min-h-screen bg-phantom-black">
       <AppSidebar />
@@ -249,18 +325,26 @@ const VaultPage = memo(() => {
                 Every result, testimonial, and case study collected in private. The asset library for when phantom phase ends.
               </p>
             </div>
-            <button
-              className="btn-primary"
-              onClick={() => {
-                if (userProjects.length === 0) return
-                setShowForm((v) => !v)
-                resetForms()
-                if (!projectId && userProjects[0]) setProjectId(userProjects[0].id)
-              }}
-              disabled={userProjects.length === 0}
-            >
-              <Plus size={16} /> Add proof
-            </button>
+            <div className="flex gap-3">
+              <button
+                className="btn-secondary"
+                onClick={() => setShowWebhook(!showWebhook)}
+              >
+                <LinkIcon size={16} /> Connect reviews
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  if (userProjects.length === 0) return
+                  setShowForm((v) => !v)
+                  resetForms()
+                  if (!projectId && userProjects[0]) setProjectId(userProjects[0].id)
+                }}
+                disabled={userProjects.length === 0}
+              >
+                <Plus size={16} /> Add proof
+              </button>
+            </div>
           </div>
 
           {userProjects.length === 0 && (
@@ -286,6 +370,194 @@ const VaultPage = memo(() => {
               </div>
             ))}
           </div>
+
+          {/* Connect Reviews Panel */}
+          <AnimatePresence>
+            {showWebhook && (
+              <motion.div
+                className="card mb-6 border-phantom-lime/30"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <p className="label text-phantom-lime mb-2">Connect review platforms</p>
+                    <p className="font-body text-[13px] text-phantom-text-secondary">
+                      Auto-import testimonials and reviews from external platforms
+                    </p>
+                  </div>
+                  <a
+                    href="/help/integrations"
+                    target="_blank"
+                    className="font-body text-[12px] text-phantom-lime hover:underline flex items-center gap-1"
+                  >
+                    View documentation <ExternalLink size={12} />
+                  </a>
+                </div>
+
+                {/* Toggle between OAuth and Webhook */}
+                <div className="flex items-center gap-2 mb-6 p-1 bg-phantom-surface-dark rounded-lg w-fit">
+                  <button
+                    onClick={() => setIntegrationMode('oauth')}
+                    className={`px-4 py-2 rounded font-ui text-[12px] transition-all ${
+                      integrationMode === 'oauth'
+                        ? 'bg-phantom-lime text-phantom-black font-semibold'
+                        : 'text-phantom-text-muted hover:text-phantom-text-secondary'
+                    }`}
+                  >
+                    One-click connect
+                  </button>
+                  <button
+                    onClick={() => setIntegrationMode('webhook')}
+                    className={`px-4 py-2 rounded font-ui text-[12px] transition-all ${
+                      integrationMode === 'webhook'
+                        ? 'bg-phantom-lime text-phantom-black font-semibold'
+                        : 'text-phantom-text-muted hover:text-phantom-text-secondary'
+                    }`}
+                  >
+                    Webhook (advanced)
+                  </button>
+                </div>
+
+                {/* OAuth Mode */}
+                {integrationMode === 'oauth' && (
+                  <div>
+                    <div className="grid md:grid-cols-2 gap-4 mb-4">
+                      {[
+                        { name: 'Typeform', desc: 'Import form responses as testimonials', available: true },
+                        { name: 'Stripe', desc: 'Auto-import payment data as revenue proof', available: true },
+                        { name: 'Google Forms', desc: 'Import testimonials from forms', available: false },
+                        { name: 'Calendly', desc: 'Track consultation bookings', available: false },
+                      ].map(({ name, desc, available }) => (
+                        <div
+                          key={name}
+                          className="border border-phantom-border-subtle rounded-xl p-4 flex items-start justify-between"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-display font-semibold text-[14px] text-phantom-text-primary">
+                                {name}
+                              </p>
+                              {!available && (
+                                <span className="badge text-[9px]">Coming soon</span>
+                              )}
+                            </div>
+                            <p className="font-body text-[12px] text-phantom-text-muted">{desc}</p>
+                          </div>
+                          <button
+                            className={`btn-${available ? 'primary' : 'ghost'} text-[12px] py-2 px-3 ml-3`}
+                            disabled={!available || connectingPlatform === name.toLowerCase()}
+                            onClick={() => available && void handleConnectPlatform(name.toLowerCase() as 'typeform' | 'stripe')}
+                          >
+                            {connectingPlatform === name.toLowerCase() ? (
+                              <><Loader size={12} className="animate-spin" /> Connecting...</>
+                            ) : available ? 'Connect' : 'Soon'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="bg-phantom-surface-dark border border-phantom-border-subtle rounded-xl p-4">
+                      <p className="font-body text-[12px] text-phantom-text-secondary">
+                        <strong className="text-phantom-text-primary">How it works:</strong> Click Connect → Authorize access → Reviews auto-import every hour. No Zapier or webhooks needed.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Webhook Mode */}
+                {integrationMode === 'webhook' && (
+                  <div>
+                    {!webhookData ? (
+                      <button
+                        className="btn-primary"
+                        onClick={() => void handleGenerateWebhook()}
+                        disabled={webhookLoading}
+                      >
+                        {webhookLoading ? (
+                          <><Loader size={14} className="animate-spin" /> Generating...</>
+                        ) : (
+                          <><LinkIcon size={14} /> Generate webhook URL</>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="label text-phantom-text-secondary mb-2 block">Webhook URL</label>
+                          <div className="flex gap-2">
+                            <input
+                              className="input flex-1 font-mono text-[12px]"
+                              value={webhookData.url}
+                              readOnly
+                            />
+                            <button
+                              className="btn-secondary"
+                              onClick={() => void copyToClipboard(webhookData.url, 'url')}
+                            >
+                              {copied === 'url' ? <Check size={14} /> : <Copy size={14} />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="label text-phantom-text-secondary mb-2 block">Webhook Key (keep secret)</label>
+                          <div className="flex gap-2">
+                            <input
+                              className="input flex-1 font-mono text-[12px]"
+                              value={webhookData.key}
+                              readOnly
+                              type="password"
+                            />
+                            <button
+                              className="btn-secondary"
+                              onClick={() => void copyToClipboard(webhookData.key, 'key')}
+                            >
+                              {copied === 'key' ? <Check size={14} /> : <Copy size={14} />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="bg-phantom-surface-dark border border-phantom-border-subtle rounded-xl p-4">
+                          <p className="font-ui text-[11px] text-phantom-lime uppercase tracking-wider mb-3">Setup instructions</p>
+                          <ol className="space-y-2 font-body text-[13px] text-phantom-text-secondary">
+                            <li className="flex gap-2">
+                              <span className="text-phantom-lime">1.</span>
+                              <span>Create a Zap/Scenario in your automation tool</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="text-phantom-lime">2.</span>
+                              <span>Connect your review platform (Trustpilot, Google Reviews, etc.)</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="text-phantom-lime">3.</span>
+                              <span>Add a Webhook POST action with the URL above</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="text-phantom-lime">4.</span>
+                              <span>Add header: <code className="text-phantom-lime">x-phantom-webhook-key</code> with your key</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="text-phantom-lime">5.</span>
+                              <span>Send JSON: <code className="text-phantom-lime">{'{ project_id, proof_type, title, content, source }'}</code></span>
+                            </li>
+                          </ol>
+                        </div>
+
+                        <button
+                          className="btn-ghost text-[12px]"
+                          onClick={() => void handleGenerateWebhook()}
+                          disabled={webhookLoading}
+                        >
+                          Regenerate key
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Add Proof Form */}
           <AnimatePresence>
@@ -315,6 +587,12 @@ const VaultPage = memo(() => {
                       <option value="revenue">Result</option>
                       <option value="case_study">Case Study</option>
                       <option value="screenshot">Screenshot</option>
+                      <option value="landing_page_test">Landing Page Test</option>
+                      <option value="ad_performance">Ad Performance</option>
+                      <option value="survey_data">Survey Data</option>
+                      <option value="preorder_campaign">Pre-order Campaign</option>
+                      <option value="competitor_analysis">Competitor Analysis</option>
+                      <option value="market_research">Market Research</option>
                     </select>
                   </div>
                   <div>
@@ -410,6 +688,160 @@ const VaultPage = memo(() => {
                           {selectedFile.name} — {(selectedFile.size / 1024).toFixed(1)} KB
                         </p>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {formType === 'landing_page_test' && (
+                  <div className="space-y-4 mb-5">
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Conversion rate</label>
+                      <input className="input" value={landingPageForm.conversionRate} onChange={(e) => setLandingPageForm((f) => ({ ...f, conversionRate: e.target.value }))} placeholder="e.g. 42% or 210/500" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Visitors</label>
+                        <input className="input" value={landingPageForm.visitors} onChange={(e) => setLandingPageForm((f) => ({ ...f, visitors: e.target.value }))} placeholder="500" />
+                      </div>
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Signups/Conversions</label>
+                        <input className="input" value={landingPageForm.signups} onChange={(e) => setLandingPageForm((f) => ({ ...f, signups: e.target.value }))} placeholder="210" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Ad spend (optional)</label>
+                      <input className="input" value={landingPageForm.adSpend} onChange={(e) => setLandingPageForm((f) => ({ ...f, adSpend: e.target.value }))} placeholder="$200" />
+                    </div>
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Context</label>
+                      <textarea className="input" rows={2} value={landingPageForm.context} onChange={(e) => setLandingPageForm((f) => ({ ...f, context: e.target.value }))} placeholder="Target audience, traffic source, test duration" />
+                    </div>
+                  </div>
+                )}
+
+                {formType === 'ad_performance' && (
+                  <div className="space-y-4 mb-5">
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Platform</label>
+                      <input className="input" value={adPerformanceForm.platform} onChange={(e) => setAdPerformanceForm((f) => ({ ...f, platform: e.target.value }))} placeholder="Facebook, Google, LinkedIn, etc." />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Total spend</label>
+                        <input className="input" value={adPerformanceForm.spend} onChange={(e) => setAdPerformanceForm((f) => ({ ...f, spend: e.target.value }))} placeholder="$200" />
+                      </div>
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Conversions</label>
+                        <input className="input" value={adPerformanceForm.conversions} onChange={(e) => setAdPerformanceForm((f) => ({ ...f, conversions: e.target.value }))} placeholder="42" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Impressions</label>
+                        <input className="input" value={adPerformanceForm.impressions} onChange={(e) => setAdPerformanceForm((f) => ({ ...f, impressions: e.target.value }))} placeholder="10,000" />
+                      </div>
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Clicks</label>
+                        <input className="input" value={adPerformanceForm.clicks} onChange={(e) => setAdPerformanceForm((f) => ({ ...f, clicks: e.target.value }))} placeholder="500" />
+                      </div>
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">CTR %</label>
+                        <input className="input" value={adPerformanceForm.ctr} onChange={(e) => setAdPerformanceForm((f) => ({ ...f, ctr: e.target.value }))} placeholder="5%" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {formType === 'survey_data' && (
+                  <div className="space-y-4 mb-5">
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Survey question</label>
+                      <input className="input" value={surveyForm.question} onChange={(e) => setSurveyForm((f) => ({ ...f, question: e.target.value }))} placeholder="What question did you ask?" />
+                    </div>
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Key finding</label>
+                      <textarea className="input" rows={2} value={surveyForm.keyFinding} onChange={(e) => setSurveyForm((f) => ({ ...f, keyFinding: e.target.value }))} placeholder="The most important insight from responses" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Sample size</label>
+                        <input className="input" value={surveyForm.sampleSize} onChange={(e) => setSurveyForm((f) => ({ ...f, sampleSize: e.target.value }))} placeholder="150 responses" />
+                      </div>
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Response summary</label>
+                        <input className="input" value={surveyForm.responses} onChange={(e) => setSurveyForm((f) => ({ ...f, responses: e.target.value }))} placeholder="73% said yes" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {formType === 'preorder_campaign' && (
+                  <div className="space-y-4 mb-5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Total revenue</label>
+                        <input className="input" value={preorderForm.revenue} onChange={(e) => setPreorderForm((f) => ({ ...f, revenue: e.target.value }))} placeholder="$8,400" />
+                      </div>
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Number of orders</label>
+                        <input className="input" value={preorderForm.orders} onChange={(e) => setPreorderForm((f) => ({ ...f, orders: e.target.value }))} placeholder="84" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Average order value</label>
+                      <input className="input" value={preorderForm.avgOrderValue} onChange={(e) => setPreorderForm((f) => ({ ...f, avgOrderValue: e.target.value }))} placeholder="$100" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Timeframe</label>
+                        <input className="input" value={preorderForm.timeframe} onChange={(e) => setPreorderForm((f) => ({ ...f, timeframe: e.target.value }))} placeholder="2 weeks" />
+                      </div>
+                      <div>
+                        <label className="label text-phantom-text-secondary mb-2 block">Traffic source</label>
+                        <input className="input" value={preorderForm.source} onChange={(e) => setPreorderForm((f) => ({ ...f, source: e.target.value }))} placeholder="Organic, paid ads, etc." />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {formType === 'competitor_analysis' && (
+                  <div className="space-y-4 mb-5">
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Competitor name</label>
+                      <input className="input" value={competitorForm.competitor} onChange={(e) => setCompetitorForm((f) => ({ ...f, competitor: e.target.value }))} placeholder="Company or product name" />
+                    </div>
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Key finding</label>
+                      <textarea className="input" rows={3} value={competitorForm.finding} onChange={(e) => setCompetitorForm((f) => ({ ...f, finding: e.target.value }))} placeholder="What did you learn? Pricing, positioning, gaps, etc." />
+                    </div>
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Source</label>
+                      <input className="input" value={competitorForm.source} onChange={(e) => setCompetitorForm((f) => ({ ...f, source: e.target.value }))} placeholder="Website, reviews, customer interviews, etc." />
+                    </div>
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Implication for your brand</label>
+                      <textarea className="input" rows={2} value={competitorForm.implication} onChange={(e) => setCompetitorForm((f) => ({ ...f, implication: e.target.value }))} placeholder="How does this inform your positioning or strategy?" />
+                    </div>
+                  </div>
+                )}
+
+                {formType === 'market_research' && (
+                  <div className="space-y-4 mb-5">
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Research topic</label>
+                      <input className="input" value={marketResearchForm.topic} onChange={(e) => setMarketResearchForm((f) => ({ ...f, topic: e.target.value }))} placeholder="What were you researching?" />
+                    </div>
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Key finding</label>
+                      <textarea className="input" rows={3} value={marketResearchForm.finding} onChange={(e) => setMarketResearchForm((f) => ({ ...f, finding: e.target.value }))} placeholder="The most important insight or data point" />
+                    </div>
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Source</label>
+                      <input className="input" value={marketResearchForm.source} onChange={(e) => setMarketResearchForm((f) => ({ ...f, source: e.target.value }))} placeholder="Report, study, database, etc." />
+                    </div>
+                    <div>
+                      <label className="label text-phantom-text-secondary mb-2 block">Date</label>
+                      <input className="input" type="date" value={marketResearchForm.date} onChange={(e) => setMarketResearchForm((f) => ({ ...f, date: e.target.value }))} />
                     </div>
                   </div>
                 )}
@@ -618,6 +1050,12 @@ function formatContent(
     resultForm: { metric: string; context: string; date: string }
     testimonialForm: { quote: string; attribution: string; dateCollected: string }
     caseForm: { beforeState: string; whatWasDone: string; afterState: string; timeline: string }
+    landingPageForm?: { conversionRate: string; visitors: string; signups: string; adSpend: string; context: string }
+    adPerformanceForm?: { platform: string; spend: string; impressions: string; clicks: string; conversions: string; ctr: string; cpa: string }
+    surveyForm?: { question: string; responses: string; keyFinding: string; sampleSize: string }
+    preorderForm?: { revenue: string; orders: string; avgOrderValue: string; timeframe: string; source: string }
+    competitorForm?: { competitor: string; finding: string; source: string; implication: string }
+    marketResearchForm?: { topic: string; finding: string; source: string; date: string }
   },
 ): string {
   if (type === 'revenue') {
@@ -634,6 +1072,58 @@ function formatContent(
       timeline: forms.caseForm.timeline.trim(),
     })
   }
+  if (type === 'landing_page_test' && forms.landingPageForm) {
+    return JSON.stringify({
+      conversionRate: forms.landingPageForm.conversionRate.trim(),
+      visitors: forms.landingPageForm.visitors.trim(),
+      signups: forms.landingPageForm.signups.trim(),
+      adSpend: forms.landingPageForm.adSpend.trim(),
+      context: forms.landingPageForm.context.trim(),
+    })
+  }
+  if (type === 'ad_performance' && forms.adPerformanceForm) {
+    return JSON.stringify({
+      platform: forms.adPerformanceForm.platform.trim(),
+      spend: forms.adPerformanceForm.spend.trim(),
+      impressions: forms.adPerformanceForm.impressions.trim(),
+      clicks: forms.adPerformanceForm.clicks.trim(),
+      conversions: forms.adPerformanceForm.conversions.trim(),
+      ctr: forms.adPerformanceForm.ctr.trim(),
+    })
+  }
+  if (type === 'survey_data' && forms.surveyForm) {
+    return JSON.stringify({
+      question: forms.surveyForm.question.trim(),
+      responses: forms.surveyForm.responses.trim(),
+      keyFinding: forms.surveyForm.keyFinding.trim(),
+      sampleSize: forms.surveyForm.sampleSize.trim(),
+    })
+  }
+  if (type === 'preorder_campaign' && forms.preorderForm) {
+    return JSON.stringify({
+      revenue: forms.preorderForm.revenue.trim(),
+      orders: forms.preorderForm.orders.trim(),
+      avgOrderValue: forms.preorderForm.avgOrderValue.trim(),
+      timeframe: forms.preorderForm.timeframe.trim(),
+      source: forms.preorderForm.source.trim(),
+    })
+  }
+  if (type === 'competitor_analysis' && forms.competitorForm) {
+    return JSON.stringify({
+      competitor: forms.competitorForm.competitor.trim(),
+      finding: forms.competitorForm.finding.trim(),
+      source: forms.competitorForm.source.trim(),
+      implication: forms.competitorForm.implication.trim(),
+    })
+  }
+  if (type === 'market_research' && forms.marketResearchForm) {
+    return JSON.stringify({
+      topic: forms.marketResearchForm.topic.trim(),
+      finding: forms.marketResearchForm.finding.trim(),
+      source: forms.marketResearchForm.source.trim(),
+      date: forms.marketResearchForm.date.trim(),
+    })
+  }
   return ''
 }
 
@@ -643,11 +1133,23 @@ function deriveTitle(
     resultForm: { metric: string; context: string; date: string }
     testimonialForm: { quote: string; attribution: string; dateCollected: string }
     caseForm: { beforeState: string; whatWasDone: string; afterState: string; timeline: string }
+    landingPageForm?: { conversionRate: string; visitors: string; signups: string; adSpend: string; context: string }
+    adPerformanceForm?: { platform: string; spend: string; impressions: string; clicks: string; conversions: string; ctr: string; cpa: string }
+    surveyForm?: { question: string; responses: string; keyFinding: string; sampleSize: string }
+    preorderForm?: { revenue: string; orders: string; avgOrderValue: string; timeframe: string; source: string }
+    competitorForm?: { competitor: string; finding: string; source: string; implication: string }
+    marketResearchForm?: { topic: string; finding: string; source: string; date: string }
   },
 ): string {
   if (type === 'revenue') return forms.resultForm.metric.trim()
   if (type === 'testimonial') return forms.testimonialForm.attribution.trim() || 'Testimonial'
   if (type === 'case_study') return forms.caseForm.beforeState.trim().slice(0, 80)
+  if (type === 'landing_page_test' && forms.landingPageForm) return `${forms.landingPageForm.conversionRate} conversion rate`
+  if (type === 'ad_performance' && forms.adPerformanceForm) return `${forms.adPerformanceForm.platform} - ${forms.adPerformanceForm.conversions} conversions`
+  if (type === 'survey_data' && forms.surveyForm) return forms.surveyForm.question.trim().slice(0, 80)
+  if (type === 'preorder_campaign' && forms.preorderForm) return `${forms.preorderForm.revenue} in pre-orders`
+  if (type === 'competitor_analysis' && forms.competitorForm) return forms.competitorForm.competitor.trim()
+  if (type === 'market_research' && forms.marketResearchForm) return forms.marketResearchForm.topic.trim()
   return ''
 }
 

@@ -1,6 +1,6 @@
 import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Check, X, Shield, TrendingUp, Lock, Loader } from 'lucide-react'
+import { Check, X, Shield, TrendingUp, Lock, Loader, ChevronDown } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import NavigationDock from '@/components/NavigationDock'
 import FooterSection from '@/components/FooterSection'
@@ -96,6 +96,7 @@ const PricingPage = memo(() => {
   const [annual, setAnnual] = useState(false)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
@@ -472,39 +473,49 @@ const PricingPage = memo(() => {
             <h2 className="font-display font-bold text-[36px] text-phantom-text-primary text-center mb-12">
               Common questions
             </h2>
-            <div className="max-w-3xl mx-auto space-y-6">
-              <div className="card">
-                <h3 className="font-display font-semibold text-[18px] text-phantom-text-primary mb-3">
-                  Can I switch between plans?
-                </h3>
-                <p className="font-body text-[15px] text-phantom-text-secondary leading-relaxed">
-                  Yes. Upgrade from Free to Pro anytime. Downgrade at the end of your billing period. Your data is preserved when switching.
-                </p>
-              </div>
-              <div className="card">
-                <h3 className="font-display font-semibold text-[18px] text-phantom-text-primary mb-3">
-                  When will I be charged?
-                </h3>
-                <p className="font-body text-[15px] text-phantom-text-secondary leading-relaxed">
-                  You'll be charged immediately when you upgrade to Pro. Cancel anytime and you won't be charged for the next billing period.
-                </p>
-              </div>
-              <div className="card">
-                <h3 className="font-display font-semibold text-[18px] text-phantom-text-primary mb-3">
-                  Do you offer refunds?
-                </h3>
-                <p className="font-body text-[15px] text-phantom-text-secondary leading-relaxed">
-                  Yes. Full refund within 30 days of purchase, no questions asked. See our refund policy for details.
-                </p>
-              </div>
-              <div className="card">
-                <h3 className="font-display font-semibold text-[18px] text-phantom-text-primary mb-3">
-                  Is my data secure?
-                </h3>
-                <p className="font-body text-[15px] text-phantom-text-secondary leading-relaxed">
-                  Absolutely. All data is encrypted in transit and at rest. We never share your data with third parties. Your brand work stays private until you choose to go public.
-                </p>
-              </div>
+            <div className="max-w-3xl mx-auto space-y-3">
+              {[
+                {
+                  q: 'Can I switch between plans?',
+                  a: 'Yes. Upgrade from Free to Pro anytime. Downgrade at the end of your billing period. Your data is preserved when switching.',
+                },
+                {
+                  q: 'When will I be charged?',
+                  a: "You'll be charged immediately when you upgrade to Pro. Cancel anytime and you won't be charged for the next billing period.",
+                },
+                {
+                  q: 'Do you offer refunds?',
+                  a: 'Yes. Full refund within 30 days of purchase, no questions asked. See our refund policy for details.',
+                },
+                {
+                  q: 'Is my data secure?',
+                  a: 'Absolutely. All data is encrypted in transit and at rest. We never share your data with third parties. Your brand work stays private until you choose to go public.',
+                },
+              ].map((faq, i) => (
+                <div key={i} className="card cursor-pointer" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-display font-semibold text-[18px] text-phantom-text-primary">
+                      {faq.q}
+                    </h3>
+                    <ChevronDown
+                      className="text-phantom-text-secondary transition-transform duration-200 shrink-0"
+                      size={20}
+                      style={{ transform: openFaq === i ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    />
+                  </div>
+                  {openFaq === i && (
+                    <motion.p
+                      className="font-body text-[15px] text-phantom-text-secondary leading-relaxed mt-3 pt-3 border-t border-phantom-border-subtle"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {faq.a}
+                    </motion.p>
+                  )}
+                </div>
+              ))}
             </div>
           </motion.div>
 

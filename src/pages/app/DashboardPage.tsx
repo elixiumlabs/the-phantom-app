@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects, type Project } from '@/contexts/ProjectContext'
 import AppSidebar from '@/components/app/AppSidebar'
+import UsageLimitBanner from '@/components/app/UsageLimitBanner'
 import { deleteProject, createProject } from '@/lib/functions'
 import { useProtection } from '@/hooks'
 
@@ -58,7 +59,6 @@ const ProjectCard = memo(({ project }: { project: Project }) => {
         </span>
       </div>
 
-      {/* Phase progress segments */}
       <div className="flex gap-1 mb-4">
         {[1, 2, 3, 4].map((phase) => {
           const filled = project[`phase_${phase}_completed` as keyof Project] === true
@@ -100,7 +100,6 @@ const ProjectCard = memo(({ project }: { project: Project }) => {
 })
 ProjectCard.displayName = 'ProjectCard'
 
-// Onboarding Modal
 const OnboardingModal = memo(({ onClose }: { onClose: () => void }) => {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -128,7 +127,6 @@ const OnboardingModal = memo(({ onClose }: { onClose: () => void }) => {
       onClose()
     } catch (err) {
       const msg = (err as Error).message
-      // Handle free plan limit gracefully
       if (/limit/i.test(msg) || /upgrade/i.test(msg)) {
         setError('Free plan allows 1 active project. Archive or delete your existing project to create a new one, or upgrade to PRO.')
       } else {
@@ -219,7 +217,6 @@ const DashboardPage = memo(() => {
   const { projects, outreachLog, loading } = useProjects()
   const [showOnboarding, setShowOnboarding] = useState(false)
 
-  // Enable protection for authenticated dashboard
   useProtection({ disableRightClick: true, monitorCopy: true })
 
   const userProjects = projects.filter(p => p.user_id === user?.id)
@@ -231,7 +228,6 @@ const DashboardPage = memo(() => {
       <AppSidebar />
 
       <main className="flex-1 ml-60 p-10 overflow-y-auto">
-        {/* Header */}
         <motion.div
           className="flex items-start justify-between mb-10"
           initial={{ opacity: 0, y: 8 }}
@@ -251,7 +247,8 @@ const DashboardPage = memo(() => {
           </button>
         </motion.div>
 
-        {/* Metrics */}
+        <UsageLimitBanner />
+
         <motion.div
           className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10"
           initial={{ opacity: 0, y: 8 }}
@@ -284,7 +281,6 @@ const DashboardPage = memo(() => {
           ))}
         </motion.div>
 
-        {/* Projects */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

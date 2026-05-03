@@ -340,3 +340,22 @@ export const createBillingPortalSession = call<
   Record<string, never>,
   { url: string }
 >('createBillingPortalSession')
+
+// ========================================
+// INTEGRATIONS
+// ========================================
+
+export const getIntegrationAuthUrl = call<
+  { platform: 'typeform' | 'stripe' | 'calendly' | 'gumroad'; project_id: string },
+  { auth_url: string }
+>('getIntegrationAuthUrl')
+
+export const disconnectIntegration = call<
+  { platform: 'typeform' | 'stripe' | 'calendly' | 'gumroad'; project_id: string },
+  { success: boolean }
+>('disconnectIntegration')
+
+export const getIntegrations = call<
+  { project_id: string },
+  { integrations: Array<{ platform: string; connected_at: string; status: string }> }
+>('getIntegrations')

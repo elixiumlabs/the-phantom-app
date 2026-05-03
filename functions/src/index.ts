@@ -34,6 +34,9 @@ export { completeOnboarding, skipOnboarding } from './automations/onboardingSeed
 export { adminGrantPro } from './automations/adminGrant'
 export { deleteProject } from './automations/deleteProject'
 export { completePhase } from './automations/completePhase'
+export { generateWebhookKey } from './automations/generateWebhookKey'
+export { proofWebhook } from './automations/proofWebhook'
+export { getIntegrationAuthUrl, disconnectIntegration, getIntegrations } from './automations/integrations'
 
 // ─── Automations: triggers ─────────────────────────────────────────────────
 export { bootstrapUser } from './automations/bootstrapUser'
@@ -43,9 +46,11 @@ export { numberIterationVersion } from './automations/iterationTriggers'
 export { detectReadyToSurface } from './automations/lockInTriggers'
 export { phaseCompletedEmail } from './automations/projectTriggers'
 export { onProofVaultCreated } from './automations/vaultTriggers'
+export { integrationCallback } from './automations/integrationCallback'
 
 // ─── Automations: scheduled ────────────────────────────────────────────────
 export { inactivityNudge, generateDailyBriefs } from './automations/scheduledJobs'
+export { syncIntegrations } from './automations/syncIntegrations'
 
 // ─── Storage pipeline ──────────────────────────────────────────────────────
 export { requestProofUploadUrl, onProofFileFinalized } from './storage/proofUpload'

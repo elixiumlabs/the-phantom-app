@@ -1,6 +1,7 @@
-import { memo, useRef } from 'react'
+import { memo, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import { ChevronDown } from 'lucide-react'
 import NavigationDock from '@/components/NavigationDock'
 import FooterSection from '@/components/FooterSection'
 import PhaseFlipCard from '@/components/PhaseFlipCard'
@@ -63,6 +64,7 @@ const PHASES = [
 const HowItWorksPage = memo(() => {
   const ref = useRef(null)
   const inView = useInView(ref, { once: true, margin: '-80px' })
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
 
   return (
     <div className="relative min-h-screen bg-phantom-black">
@@ -73,16 +75,16 @@ const HowItWorksPage = memo(() => {
         <div className="relative pt-32 pb-32 px-6">
           {/* Background Image */}
           <div 
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
             style={{ 
-              backgroundImage: 'url(PLACEHOLDER_IMAGE_URL)',
+              backgroundImage: 'url(https://storage.googleapis.com/phantom-app/4K_ultra-wide_editorial_fashion_photograph_202605031225.jpeg)',
               backgroundColor: '#000000'
             }}
           />
+
           {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-phantom-black/80 via-phantom-black/90 to-phantom-black" />
+          <div className="absolute inset-0 bg-gradient-to-b from-phantom-black/70 via-30% via-phantom-black/75 via-60% via-phantom-black/90 to-phantom-black" />
           
-          {/* Content */}
           <div className="relative z-10 max-w-7xl mx-auto mb-32">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Left - Content */}
@@ -90,6 +92,7 @@ const HowItWorksPage = memo(() => {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="mt-20"
               >
                 <p className="label text-phantom-lime mb-6">The four phases</p>
                 <h1 className="font-display font-bold text-[48px] md:text-[64px] text-phantom-text-primary leading-[1.1] mb-8">
@@ -109,25 +112,7 @@ const HowItWorksPage = memo(() => {
                 </div>
               </motion.div>
 
-              {/* Right - Visual Element */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, ease: 'easeOut', delay: 0.2 }}
-                className="relative hidden lg:block"
-              >
-                <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-phantom-lime/20 bg-phantom-surface-dark/50 backdrop-blur-sm relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-phantom-lime/10 to-transparent" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="w-24 h-24 mx-auto mb-4 bg-phantom-lime/10 rounded-2xl flex items-center justify-center border border-phantom-lime/30">
-                        <span className="text-phantom-lime text-[40px]">📊</span>
-                      </div>
-                      <p className="font-body text-[14px] text-phantom-text-muted">4 Phase System</p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+
             </div>
           </div>
         </div>
@@ -166,23 +151,34 @@ const HowItWorksPage = memo(() => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut', delay: 0.5 }}
           >
-            <div className="card bg-phantom-surface-dark border-phantom-lime/20 max-w-3xl mx-auto">
-              <h2 className="font-display font-bold text-[28px] text-phantom-text-primary mb-4">
-                Why this order matters
-              </h2>
-              <div className="space-y-4 font-body text-[15px] text-phantom-text-secondary leading-relaxed">
-                <p>
-                  Most founders build backwards. They pick a name, design a logo, write positioning, build the product — then try to find buyers.
-                </p>
-                <p>
-                  Phantom reverses that. You start with the problem and the people who have it. You test the offer before you build it. You iterate in private until the data tells you it works.
-                </p>
-                <p>
-                  Only then — when you have proof, validated messaging, and repeatable conversions — do you lock in the brand and go public.
-                </p>
-                <p className="text-phantom-lime font-medium">
-                  The result: You launch with leverage, not hope.
-                </p>
+            <div className="max-w-6xl mx-auto">
+              <div className="grid lg:grid-cols-2 gap-8 items-center">
+                {/* Left - Image Placeholder */}
+                <div 
+                  className="aspect-square rounded-2xl bg-phantom-surface-dark border border-phantom-lime/20 bg-cover bg-center"
+                  style={{ backgroundImage: 'url(https://storage.googleapis.com/phantom-app/4K_ultra-wide_cinematic_editorial_SaaS_202605031303.jpeg)' }}
+                />
+                
+                {/* Right - Content */}
+                <div className="card bg-phantom-surface-dark border-phantom-lime/20">
+                  <h2 className="font-display font-bold text-[28px] text-phantom-text-primary mb-4">
+                    Why this order matters
+                  </h2>
+                  <div className="space-y-4 font-body text-[15px] text-phantom-text-secondary leading-relaxed">
+                    <p>
+                      Most founders build backwards. They pick a name, design a logo, write positioning, build the product — then try to find buyers.
+                    </p>
+                    <p>
+                      Phantom reverses that. You start with the problem and the people who have it. You test the offer before you build it. You iterate in private until the data tells you it works.
+                    </p>
+                    <p>
+                      Only then — when you have proof, validated messaging, and repeatable conversions — do you lock in the brand and go public.
+                    </p>
+                    <p className="text-phantom-lime font-medium">
+                      The result: You launch with leverage, not hope.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -468,47 +464,53 @@ const HowItWorksPage = memo(() => {
             <h2 className="font-display font-bold text-[32px] text-phantom-text-primary text-center mb-12">
               Common questions
             </h2>
-            <div className="max-w-3xl mx-auto space-y-6">
-              <div className="card bg-phantom-surface-dark border-phantom-lime/10">
-                <h3 className="font-display font-bold text-[18px] text-phantom-text-primary mb-2">
-                  How long does each phase take?
-                </h3>
-                <p className="font-body text-[14px] text-phantom-text-secondary leading-relaxed">
-                  It depends on your testing velocity. Phase 1 can be done in a day. Phase 2 takes as long as your first test cycle (usually 1-2 weeks). Phase 3 is iterative — it ends when you have repeatable conversions. Phase 4 is fast once you have the data.
-                </p>
-              </div>
-              <div className="card bg-phantom-surface-dark border-phantom-lime/10">
-                <h3 className="font-display font-bold text-[18px] text-phantom-text-primary mb-2">
-                  Can I skip a phase?
-                </h3>
-                <p className="font-body text-[14px] text-phantom-text-secondary leading-relaxed">
-                  No. Each phase builds on the previous one. Skipping ahead means you're building without validation — which is exactly what Phantom is designed to prevent.
-                </p>
-              </div>
-              <div className="card bg-phantom-surface-dark border-phantom-lime/10">
-                <h3 className="font-display font-bold text-[18px] text-phantom-text-primary mb-2">
-                  What if my hypothesis is wrong?
-                </h3>
-                <p className="font-body text-[14px] text-phantom-text-secondary leading-relaxed">
-                  That's the point. Phase 2 and 3 exist to catch that. If your hypothesis fails, you iterate in private until you find what works — without burning your reputation or audience.
-                </p>
-              </div>
-              <div className="card bg-phantom-surface-dark border-phantom-lime/10">
-                <h3 className="font-display font-bold text-[18px] text-phantom-text-primary mb-2">
-                  Do I need to build the full product first?
-                </h3>
-                <p className="font-body text-[14px] text-phantom-text-secondary leading-relaxed">
-                  No. Phase 2 is about testing the minimum viable offer — a landing page, a Notion doc, a Loom video. You validate demand before you build.
-                </p>
-              </div>
-              <div className="card bg-phantom-surface-dark border-phantom-lime/10">
-                <h3 className="font-display font-bold text-[18px] text-phantom-text-primary mb-2">
-                  What if I already have a brand?
-                </h3>
-                <p className="font-body text-[14px] text-phantom-text-secondary leading-relaxed">
-                  You can still use Phantom to validate a new offer, pivot, or test a new market. The process works whether you're starting from scratch or iterating on something existing.
-                </p>
-              </div>
+            <div className="max-w-3xl mx-auto space-y-3">
+              {[
+                {
+                  q: 'How long does each phase take?',
+                  a: "It depends on your testing velocity. Phase 1 can be done in a day. Phase 2 takes as long as your first test cycle (usually 1-2 weeks). Phase 3 is iterative — it ends when you have repeatable conversions. Phase 4 is fast once you have the data.",
+                },
+                {
+                  q: 'Can I skip a phase?',
+                  a: "No. Each phase builds on the previous one. Skipping ahead means you're building without validation — which is exactly what Phantom is designed to prevent.",
+                },
+                {
+                  q: 'What if my hypothesis is wrong?',
+                  a: "That's the point. Phase 2 and 3 exist to catch that. If your hypothesis fails, you iterate in private until you find what works — without burning your reputation or audience.",
+                },
+                {
+                  q: 'Do I need to build the full product first?',
+                  a: 'No. Phase 2 is about testing the minimum viable offer — a landing page, a Notion doc, a Loom video. You validate demand before you build.',
+                },
+                {
+                  q: 'What if I already have a brand?',
+                  a: "You can still use Phantom to validate a new offer, pivot, or test a new market. The process works whether you're starting from scratch or iterating on something existing.",
+                },
+              ].map((faq, i) => (
+                <div key={i} className="card bg-phantom-surface-dark border-phantom-lime/10 cursor-pointer" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-display font-bold text-[18px] text-phantom-text-primary">
+                      {faq.q}
+                    </h3>
+                    <ChevronDown
+                      className="text-phantom-text-secondary transition-transform duration-200 shrink-0"
+                      size={20}
+                      style={{ transform: openFaq === i ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    />
+                  </div>
+                  {openFaq === i && (
+                    <motion.p
+                      className="font-body text-[14px] text-phantom-text-secondary leading-relaxed mt-3 pt-3 border-t border-phantom-border-subtle"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {faq.a}
+                    </motion.p>
+                  )}
+                </div>
+              ))}
             </div>
           </motion.div>
 

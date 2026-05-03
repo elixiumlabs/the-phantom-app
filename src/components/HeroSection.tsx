@@ -1,7 +1,6 @@
 import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import TypewriterTitle from './TypewriterTitle'
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 8 },
