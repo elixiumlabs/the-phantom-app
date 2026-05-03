@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Loader, Download, Sparkles, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore'

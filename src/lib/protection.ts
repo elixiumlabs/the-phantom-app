@@ -36,7 +36,7 @@ export function disableTextSelection(element: HTMLElement) {
 
 // Monitor copy events
 export function monitorCopyEvents(callback: (text: string) => void) {
-  document.addEventListener('copy', (e) => {
+  document.addEventListener('copy', () => {
     const selection = window.getSelection()?.toString() || ''
     if (selection.length > 100) {
       callback(selection)

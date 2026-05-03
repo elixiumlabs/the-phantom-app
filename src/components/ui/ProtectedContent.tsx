@@ -38,7 +38,7 @@ export function ProtectedContent({
         overflow: hidden;
         user-select: none;
       `
-      overlay.textContent = `${user.uid} • ${new Date().toISOString()}`
+      overlay.textContent = `${user.id} • ${new Date().toISOString()}`
       ref.current.appendChild(overlay)
     }
   }, [disableSelect, watermark, user])

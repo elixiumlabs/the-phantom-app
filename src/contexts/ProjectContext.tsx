@@ -26,11 +26,13 @@ export interface GhostIdentity {
   working_name: string
   positioning_statement: string
   voice_adjectives: string[]
+  anti_customers?: string[]
   checklist: {
     problem_written: boolean
     advantages_mapped: boolean
     positioning_written: boolean
     voice_defined: boolean
+    anti_customers_defined?: boolean
   }
   // AI-generated options
   ai_problem_options?: Array<{
@@ -80,6 +82,15 @@ export interface SilentTest {
     outreach_30: boolean
     data_recorded: boolean
     objections_documented: boolean
+  }
+  sales_page?: {
+    headline: string
+    subheadline: string
+    problem: string
+    promise: string
+    proof: string
+    price: string
+    cta: string
   }
   // AI-generated
   ai_offer_drafts?: Array<{
@@ -166,6 +177,7 @@ export interface ProofVaultItem {
   storage_path?: string
   amount: number | null
   source: string | null
+  date?: string | null
   tags: string[]
   content_type: string | null
   size: number | null
