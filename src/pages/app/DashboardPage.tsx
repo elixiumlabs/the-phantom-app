@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useProjects, type Project } from '@/contexts/ProjectContext'
 import AppSidebar from '@/components/app/AppSidebar'
 import { completeOnboarding, deleteProject } from '@/lib/functions'
+import { useProtection } from '@/hooks'
 
 const PHASE_LABELS: Record<number, string> = {
   1: 'Phase 01 — Ghost Identity',
@@ -257,6 +258,9 @@ const DashboardPage = memo(() => {
   const { user } = useAuth()
   const { projects, outreachLog, loading } = useProjects()
   const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // Enable protection for authenticated dashboard
+  useProtection({ disableRightClick: true, monitorCopy: true })
 
   const userProjects = projects.filter(p => p.user_id === user?.id)
   const hour = new Date().getHours()

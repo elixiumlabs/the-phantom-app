@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Loader, Download, Sparkles, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
@@ -16,14 +16,20 @@ import {
   completePhase,
 } from '@/lib/functions'
 import GeneratorPanel from '@/components/app/GeneratorPanel'
+import { ProtectedContent } from '@/components/ui/ProtectedContent'
+import { useProtection } from '@/hooks'
 
 const VISUAL_DIRECTIONS = ['minimal', 'editorial', 'bold', 'warm', 'technical', 'other']
 
 const PhaseLock = memo(() => {
   const { id } = useParams()
+  const navigate = useNavigate()
   const projectId = id!
   const { currentProject, lockIn } = useProjects()
   const { items: vaultItems } = useVault(projectId)
+
+  // Enable protection for AI-generated content
+  useProtection({ disableRightClick: true, monitorCopy: true })
 
   const liRef = doc(db, 'projects', projectId, 'lock_in', 'main')
 
@@ -126,6 +132,7 @@ const PhaseLock = memo(() => {
     setCompletionError(null)
     try {
       await completePhase({ project_id: projectId, phase: 4 })
+      // Phase 4 is final - stay on page to show success banner
     } catch (err) {
       setCompletionError(err instanceof Error ? err.message : 'Could not complete phase.')
       setCompleting(false)
@@ -235,7 +242,8 @@ const PhaseLock = memo(() => {
           cta="Generate positioning"
           run={() => positioningFromData({ project_id: projectId })}
           renderResult={(out) => (
-            <div className="space-y-3">
+            <ProtectedContent watermark disableSelect>
+              <div className="space-y-3">
               <div className="bg-phantom-lime/5 border border-phantom-lime/30 rounded p-4">
                 <p className="label text-phantom-lime mb-2">Positioning</p>
                 <p className="font-body text-[16px] text-phantom-text-primary leading-relaxed mb-3">
@@ -272,6 +280,7 @@ const PhaseLock = memo(() => {
                 </div>
               )}
             </div>
+            </ProtectedContent>
           )}
         />
       </div>
@@ -345,7 +354,8 @@ const PhaseLock = memo(() => {
           cta="Recommend identity"
           run={() => recommendBrandIdentity({ project_id: projectId })}
           renderResult={(out) => (
-            <div className="space-y-3">
+            <ProtectedContent watermark disableSelect>
+              <div className="space-y-3">
               <div className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
                 <p className="label text-phantom-lime mb-1">Visual direction</p>
                 <p className="font-body text-[14px] text-phantom-text-primary mb-1">{out.visual_direction}</p>
@@ -387,6 +397,7 @@ const PhaseLock = memo(() => {
                 <p className="font-body text-[13px] text-phantom-text-secondary">{out.one_thing_to_avoid}</p>
               </div>
             </div>
+            </ProtectedContent>
           )}
         />
       </div>
@@ -405,7 +416,8 @@ const PhaseLock = memo(() => {
           cta="Build not-for"
           run={() => buildNotFor({ project_id: projectId })}
           renderResult={(out) => (
-            <div className="space-y-3">
+            <ProtectedContent watermark disableSelect>
+              <div className="space-y-3">
               <div className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
                 <p className="label text-phantom-lime mb-2">Not-for paragraph</p>
                 <p className="font-body text-[14px] text-phantom-text-primary mb-2 leading-relaxed">{out.not_for_paragraph}</p>
@@ -436,6 +448,7 @@ const PhaseLock = memo(() => {
                 </div>
               )}
             </div>
+            </ProtectedContent>
           )}
         />
       </div>
@@ -475,7 +488,8 @@ const PhaseLock = memo(() => {
             })
           }
           renderResult={(out) => (
-            <div className="space-y-3">
+            <ProtectedContent watermark disableSelect>
+              <div className="space-y-3">
               <div className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
                 <p className="label text-phantom-lime mb-1">Pull quote</p>
                 <p className="font-body text-[15px] text-phantom-text-primary italic leading-relaxed">"{out.pull_quote}"</p>
@@ -525,6 +539,7 @@ const PhaseLock = memo(() => {
               )}
               <p className="font-body text-[11px] text-phantom-text-muted">Saved to your proof vault.</p>
             </div>
+            </ProtectedContent>
           )}
         />
       </div>
@@ -549,7 +564,8 @@ const PhaseLock = memo(() => {
           cta="Curate"
           run={() => curateProofPackage({ project_id: projectId })}
           renderResult={(out) => (
-            <div className="space-y-3">
+            <ProtectedContent watermark disableSelect>
+              <div className="space-y-3">
               <p className="font-body text-[14px] text-phantom-text-secondary">{out.recommendation}</p>
               <div className="space-y-2">
                 {out.selected.map((s, i) => (
@@ -569,6 +585,7 @@ const PhaseLock = memo(() => {
                 </div>
               )}
             </div>
+            </ProtectedContent>
           )}
         />
       </div>

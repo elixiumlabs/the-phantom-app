@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Plus, Trash2, Lock, Unlock, Loader, ExternalLink } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -19,6 +19,8 @@ import {
   completePhase,
 } from '@/lib/functions'
 import GeneratorPanel from '@/components/app/GeneratorPanel'
+import { ProtectedContent } from '@/components/ui/ProtectedContent'
+import { useProtection } from '@/hooks'
 
 type OutreachKind = 'cold_dm' | 'email' | 'community_post' | 'ad' | 'other'
 type Channel = 'dm' | 'email' | 'community_post'
@@ -31,8 +33,12 @@ const CHANNEL_OPTIONS: Array<{ value: Channel; label: string }> = [
 
 const PhaseTest = memo(() => {
   const { id } = useParams()
+  const navigate = useNavigate()
   const projectId = id!
   const { currentProject, silentTest, outreachLog } = useProjects()
+
+  // Enable protection for AI-generated content
+  useProtection({ disableRightClick: true, monitorCopy: true })
 
   // Sub-doc ref shortcut
   const stRef = doc(db, 'projects', projectId, 'silent_test', 'main')
@@ -207,6 +213,7 @@ const PhaseTest = memo(() => {
     setCompletionError(null)
     try {
       await completePhase({ project_id: projectId, phase: 2 })
+      navigate(`/project/${projectId}/iterate`)
     } catch (err) {
       setCompletionError(err instanceof Error ? err.message : 'Could not advance phase.')
       setCompleting(false)
@@ -234,111 +241,134 @@ const PhaseTest = memo(() => {
       {/* Section 1 — Minimum Offer */}
       <div className="card mb-6">
         <p className="label mb-4">Minimum Offer</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-5">
+          Generate 3 offer drafts from your Phase 01 data, or customize manually below.
+        </p>
 
-        <div className="space-y-4 mb-5">
-          <div>
-            <label className="label text-phantom-text-secondary mb-2 block">Offer name</label>
-            <input
-              className="input"
-              value={offerName}
-              onChange={(e) => setOfferName(e.target.value)}
-              placeholder="A short, functional name. Naming a test, not a product."
-            />
-          </div>
-          <div>
-            <label className="label text-phantom-text-secondary mb-2 block">Offer type</label>
-            <select className="input" value={offerType} onChange={(e) => setOfferType(e.target.value)}>
-              <option value="">Select...</option>
-              <option value="service">Service</option>
-              <option value="digital_product">Digital product</option>
-              <option value="course">Course</option>
-              <option value="consultation">Consultation</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div>
-            <label className="label text-phantom-text-secondary mb-2 block">What it includes (one per line)</label>
-            <textarea
-              className="input min-h-[88px]"
-              value={offerIncludesRaw}
-              onChange={(e) => setOfferIncludesRaw(e.target.value)}
-              placeholder={'• 30-min strategy call\n• Written audit\n• 7-day follow-up'}
-            />
-          </div>
-          <div>
-            <label className="label text-phantom-text-secondary mb-2 block">The outcome it produces</label>
-            <input
-              className="input"
-              value={offerOutcome}
-              onChange={(e) => setOfferOutcome(e.target.value)}
-              placeholder="The measurable result the buyer gets"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label text-phantom-text-secondary mb-2 block">Price (USD)</label>
-              <input
-                className="input"
-                type="number"
-                value={offerPrice}
-                onChange={(e) => setOfferPrice(e.target.value)}
-                placeholder="e.g. 297"
-              />
-            </div>
-            <div>
-              <label className="label text-phantom-text-secondary mb-2 block">Delivery</label>
-              <input
-                className="input"
-                value={offerDelivery}
-                onChange={(e) => setOfferDelivery(e.target.value)}
-                placeholder="e.g. 1:1 call + Notion doc"
-              />
-            </div>
-          </div>
-        </div>
-
-        <button className="btn-secondary" onClick={saveOffer}>
-          Save offer
-        </button>
-
-        <div className="mt-5 pt-5 border-t border-phantom-border-subtle">
-          <GeneratorPanel
-            title="Build the minimum offer"
-            description="Returns 3 minimum-offer drafts calibrated to validate fast — name, includes, outcome, price band, delivery."
-            cta="Generate 3 offer drafts"
-            run={() => buildMinimumOffer({ project_id: projectId })}
-            renderResult={(out) => (
+        <GeneratorPanel
+          title="Build the minimum offer"
+          description="Returns 3 minimum-offer drafts calibrated to validate fast — name, includes, outcome, price band, delivery. Auto-extracts from Phase 01 or uses your manual inputs below."
+          cta="Generate 3 offer drafts"
+          run={() => buildMinimumOffer({ project_id: projectId })}
+          renderResult={(out) => {
+            // Handle nested output structure
+            const data = out.output || out
+            const drafts = data.drafts || []
+            
+            if (drafts.length === 0) {
+              return (
+                <div className="bg-phantom-warning/10 border border-phantom-warning/30 rounded p-3">
+                  <p className="font-body text-[13px] text-phantom-warning">
+                    No offer drafts generated. Try adjusting your Phase 1 data.
+                  </p>
+                </div>
+              )
+            }
+            
+            return (
+            <ProtectedContent watermark disableSelect>
               <div className="space-y-3">
-                {out.drafts.map((d, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      setOfferName(d.name)
-                      setOfferType(d.type)
-                      setOfferIncludesRaw(d.includes.join('\n'))
-                      setOfferOutcome(d.outcome_sentence)
-                      setOfferPrice(String(d.price_band.low))
-                      setOfferDelivery(d.delivery_method)
-                    }}
-                    className="w-full text-left bg-phantom-black/40 border border-phantom-border-subtle rounded p-3 hover:border-phantom-lime/40 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-1">
-                      <p className="font-body text-[14px] text-phantom-text-primary font-medium">{d.name}</p>
-                      <span className="font-code text-[12px] text-phantom-lime shrink-0">
-                        ${d.price_band.low}–${d.price_band.high}
-                      </span>
-                    </div>
-                    <p className="font-body text-[12px] text-phantom-text-muted mb-2">{d.outcome_sentence}</p>
-                    <p className="font-body text-[11px] text-phantom-text-muted">{d.why_this_validates_fast}</p>
-                  </button>
-                ))}
-                <p className="font-body text-[11px] text-phantom-text-muted">
-                  Click any draft to load it into the form above.
-                </p>
+              {drafts.map((d, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    setOfferName(d.name)
+                    setOfferType(d.type)
+                    setOfferIncludesRaw(d.includes.join('\n'))
+                    setOfferOutcome(d.outcome_sentence)
+                    setOfferPrice(String(d.price_band.low))
+                    setOfferDelivery(d.delivery_method)
+                  }}
+                  className="w-full text-left bg-phantom-black/40 border border-phantom-border-subtle rounded p-3 hover:border-phantom-lime/40 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <p className="font-body text-[14px] text-phantom-text-primary font-medium">{d.name}</p>
+                    <span className="font-code text-[12px] text-phantom-lime shrink-0">
+                      ${d.price_band.low}–${d.price_band.high}
+                    </span>
+                  </div>
+                  <p className="font-body text-[12px] text-phantom-text-muted mb-2">{d.outcome_sentence}</p>
+                  <p className="font-body text-[11px] text-phantom-text-muted">{d.why_this_validates_fast}</p>
+                </button>
+              ))}
+              <p className="font-body text-[11px] text-phantom-text-muted">
+                Click any draft to load it into the form below.
+              </p>
+            </div>
+            </ProtectedContent>
+            )
+          }}
+        />
+
+        <div className="mt-6 pt-6 border-t border-phantom-border-subtle">
+          <p className="label text-phantom-text-muted mb-4">Or customize your offer details (optional)</p>
+          
+          <div className="space-y-4 mb-5">
+            <div>
+              <label className="label text-phantom-text-secondary mb-2 block">Offer name</label>
+              <input
+                className="input"
+                value={offerName}
+                onChange={(e) => setOfferName(e.target.value)}
+                placeholder="A short, functional name. Naming a test, not a product."
+              />
+            </div>
+            <div>
+              <label className="label text-phantom-text-secondary mb-2 block">Offer type</label>
+              <select className="input" value={offerType} onChange={(e) => setOfferType(e.target.value)}>
+                <option value="">Select...</option>
+                <option value="service">Service</option>
+                <option value="digital_product">Digital product</option>
+                <option value="course">Course</option>
+                <option value="consultation">Consultation</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="label text-phantom-text-secondary mb-2 block">What it includes (one per line)</label>
+              <textarea
+                className="input min-h-[88px]"
+                value={offerIncludesRaw}
+                onChange={(e) => setOfferIncludesRaw(e.target.value)}
+                placeholder={'• 30-min strategy call\n• Written audit\n• 7-day follow-up'}
+              />
+            </div>
+            <div>
+              <label className="label text-phantom-text-secondary mb-2 block">The outcome it produces</label>
+              <input
+                className="input"
+                value={offerOutcome}
+                onChange={(e) => setOfferOutcome(e.target.value)}
+                placeholder="The measurable result the buyer gets"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label text-phantom-text-secondary mb-2 block">Price (USD)</label>
+                <input
+                  className="input"
+                  type="number"
+                  value={offerPrice}
+                  onChange={(e) => setOfferPrice(e.target.value)}
+                  placeholder="e.g. 297"
+                />
               </div>
-            )}
-          />
+              <div>
+                <label className="label text-phantom-text-secondary mb-2 block">Delivery</label>
+                <input
+                  className="input"
+                  value={offerDelivery}
+                  onChange={(e) => setOfferDelivery(e.target.value)}
+                  placeholder="e.g. 1:1 call + Notion doc"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button className="btn-secondary" onClick={saveOffer}>
+            Save offer
+          </button>
         </div>
       </div>
 
@@ -466,9 +496,26 @@ const PhaseTest = memo(() => {
           disabledReason="Pick a specific platform first."
           cta="Generate 3 variations"
           run={() => generateOutreach({ project_id: projectId, platform, channel })}
-          renderResult={(out) => (
-            <div className="space-y-3">
-              {out.variations.map((v, i) => (
+          renderResult={(out) => {
+            // Handle nested output structure
+            const data = out.output || out
+            const variations = data.variations || []
+            const platformNotes = data.platform_notes || data.platformNotes || ''
+            
+            if (variations.length === 0) {
+              return (
+                <div className="bg-phantom-warning/10 border border-phantom-warning/30 rounded p-3">
+                  <p className="font-body text-[13px] text-phantom-warning">
+                    No variations generated.
+                  </p>
+                </div>
+              )
+            }
+            
+            return (
+            <ProtectedContent watermark disableSelect>
+              <div className="space-y-3">
+              {variations.map((v, i) => (
                 <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
                   <div className="flex items-center justify-between mb-2">
                     <p className="label text-phantom-lime uppercase text-[11px]">{v.variant.replace(/_/g, ' ')}</p>
@@ -485,9 +532,11 @@ const PhaseTest = memo(() => {
                   </button>
                 </div>
               ))}
-              <p className="font-body text-[11px] text-phantom-text-muted">{out.platform_notes}</p>
+              <p className="font-body text-[11px] text-phantom-text-muted">{platformNotes}</p>
             </div>
-          )}
+            </ProtectedContent>
+            )
+          }}
         />
       </div>
 

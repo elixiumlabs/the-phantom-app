@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { Plus, Trash2, Filter, Loader } from 'lucide-react'
+import { Plus, Trash2, Filter, Loader, Edit2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   addDoc,
@@ -11,6 +11,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  updateDoc,
   where,
   type DocumentData,
   type Unsubscribe,
@@ -74,6 +75,7 @@ const SignalTrackerPage = memo(() => {
   const [projectFilter, setProjectFilter] = useState<string>('all')
 
   const [showForm, setShowForm] = useState(false)
+  const [editingRow, setEditingRow] = useState<OutreachRow | null>(null)
   const [form, setForm] = useState({
     project_id: '',
     type: 'reply' as DerivedType,
@@ -187,9 +189,18 @@ const SignalTrackerPage = memo(() => {
       converted: form.type === 'conversion',
       objection: form.type === 'objection' ? form.notes.trim() : '',
       notes: form.type === 'objection' ? '' : form.notes.trim(),
-      created_at: serverTimestamp(),
     }
-    await addDoc(collection(db, 'projects', form.project_id, 'outreach_log'), payload)
+
+    if (editingRow) {
+      // Update existing entry
+      await updateDoc(doc(db, 'projects', form.project_id, 'outreach_log', editingRow.id), payload)
+    } else {
+      // Create new entry
+      await addDoc(collection(db, 'projects', form.project_id, 'outreach_log'), {
+        ...payload,
+        created_at: serverTimestamp(),
+      })
+    }
 
     setForm({
       project_id: form.project_id,
@@ -197,11 +208,24 @@ const SignalTrackerPage = memo(() => {
       platform: '',
       notes: '',
     })
+    setEditingRow(null)
     setShowForm(false)
   }
 
   const remove = async (row: OutreachRow) => {
     await deleteDoc(doc(db, 'projects', row.project_id, 'outreach_log', row.id))
+  }
+
+  const handleEdit = (row: OutreachRow) => {
+    setEditingRow(row)
+    const type = deriveType(row)
+    setForm({
+      project_id: row.project_id,
+      type,
+      platform: row.platform,
+      notes: type === 'objection' ? row.objection : row.notes,
+    })
+    setShowForm(true)
   }
 
   return (
@@ -270,7 +294,7 @@ const SignalTrackerPage = memo(() => {
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <p className="label text-phantom-lime mb-4">New signal</p>
+                <p className="label text-phantom-lime mb-4">{editingRow ? 'Edit signal' : 'New signal'}</p>
                 <div className="grid md:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="label text-phantom-text-secondary mb-2 block">Type</label>
@@ -329,9 +353,9 @@ const SignalTrackerPage = memo(() => {
                 </div>
                 <div className="flex gap-3 mt-4">
                   <button className="btn-primary" onClick={submit} disabled={!form.project_id || !form.platform.trim()}>
-                    Log signal
+                    {editingRow ? 'Update signal' : 'Log signal'}
                   </button>
-                  <button className="btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
+                  <button className="btn-ghost" onClick={() => { setShowForm(false); setEditingRow(null); }}>Cancel</button>
                 </div>
               </motion.div>
             )}
@@ -423,13 +447,22 @@ const SignalTrackerPage = memo(() => {
                             {r.objection || r.notes || <span className="text-phantom-text-muted">—</span>}
                           </td>
                           <td className="py-3.5">
-                            <button
-                              onClick={() => remove(r)}
-                              className="text-phantom-text-muted hover:text-phantom-danger transition-colors"
-                              aria-label="Delete entry"
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEdit(r)}
+                                className="text-phantom-text-muted hover:text-phantom-lime transition-colors"
+                                aria-label="Edit entry"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              <button
+                                onClick={() => remove(r)}
+                                className="text-phantom-text-muted hover:text-phantom-danger transition-colors"
+                                aria-label="Delete entry"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )

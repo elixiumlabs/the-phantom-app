@@ -1,7 +1,7 @@
 import { memo, useMemo, useRef, useState } from 'react'
-import { Plus, Trash2, TrendingUp, MessageSquare, FileText, Camera, Filter, Upload, Loader, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, TrendingUp, MessageSquare, FileText, Camera, Filter, Upload, Loader, ExternalLink, Edit2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { addDoc, collection, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects, type ProofVaultItem } from '@/contexts/ProjectContext'
 import { useVault } from '@/hooks'
@@ -43,6 +43,7 @@ const VaultPage = memo(() => {
   const [projectFilter, setProjectFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest')
   const [showForm, setShowForm] = useState(false)
+  const [editingItem, setEditingItem] = useState<ProofVaultItem | null>(null)
   const [formType, setFormType] = useState<BackendProofType>('testimonial')
   const [projectId, setProjectId] = useState(userProjects[0]?.id ?? '')
   const [submitting, setSubmitting] = useState(false)
@@ -89,6 +90,7 @@ const VaultPage = memo(() => {
     setSelectedFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
     setError(null)
+    setEditingItem(null)
   }
 
   const canSubmit = () => {
@@ -107,7 +109,24 @@ const VaultPage = memo(() => {
     setError(null)
 
     try {
-      if (formType === 'screenshot' && selectedFile) {
+      if (editingItem) {
+        // Update existing item
+        const content = formatContent(formType, { resultForm, testimonialForm, caseForm })
+        const amount =
+          formType === 'revenue' && resultForm.metric ? extractAmount(resultForm.metric) : null
+        const date =
+          formType === 'revenue' ? resultForm.date :
+          formType === 'testimonial' ? testimonialForm.dateCollected :
+          ''
+        
+        await updateDoc(doc(db, 'proof_vault', editingItem.id), {
+          title: deriveTitle(formType, { resultForm, testimonialForm, caseForm }),
+          content,
+          amount,
+          source: formType === 'testimonial' ? testimonialForm.attribution || null : null,
+          date: date || null,
+        })
+      } else if (formType === 'screenshot' && selectedFile) {
         if (!ALLOWED_FILE.test(selectedFile.type)) {
           throw new Error(`Unsupported file type: ${selectedFile.type || 'unknown'}`)
         }
@@ -164,6 +183,42 @@ const VaultPage = memo(() => {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleEdit = (item: ProofVaultItem) => {
+    setEditingItem(item)
+    setFormType(item.proof_type)
+    setProjectId(item.project_id)
+    
+    // Populate forms based on type
+    if (item.proof_type === 'revenue') {
+      setResultForm({
+        metric: item.title || '',
+        context: item.content || '',
+        date: item.date || '',
+      })
+    } else if (item.proof_type === 'testimonial') {
+      setTestimonialForm({
+        quote: item.content || '',
+        attribution: item.source || '',
+        dateCollected: item.date || '',
+      })
+    } else if (item.proof_type === 'case_study') {
+      const parts = parseCaseStudy(item.content)
+      setCaseForm({
+        beforeState: parts.before || '',
+        whatWasDone: parts.what || '',
+        afterState: parts.after || '',
+        timeline: parts.timeline || '',
+      })
+    } else if (item.proof_type === 'screenshot') {
+      setScreenshotForm({
+        title: item.title || '',
+        notes: item.content || '',
+      })
+    }
+    
+    setShowForm(true)
   }
 
   const handleDelete = async (item: ProofVaultItem) => {
@@ -242,7 +297,7 @@ const VaultPage = memo(() => {
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <p className="label text-phantom-lime mb-4">New proof item</p>
+                <p className="label text-phantom-lime mb-4">{editingItem ? 'Edit proof item' : 'New proof item'}</p>
 
                 <div className="grid md:grid-cols-2 gap-4 mb-5">
                   <div>
@@ -254,6 +309,7 @@ const VaultPage = memo(() => {
                         setFormType(e.target.value as BackendProofType)
                         resetForms()
                       }}
+                      disabled={!!editingItem}
                     >
                       <option value="testimonial">Testimonial</option>
                       <option value="revenue">Result</option>
@@ -367,14 +423,14 @@ const VaultPage = memo(() => {
                 <div className="flex gap-3">
                   <button className="btn-primary" onClick={() => void submit()} disabled={!canSubmit()}>
                     {submitting ? (
-                      <><Loader size={14} className="animate-spin" /> Saving...</>
-                    ) : formType === 'screenshot' ? (
+                      <><Loader size={14} className="animate-spin" /> {editingItem ? 'Updating...' : 'Saving...'}</>
+                    ) : formType === 'screenshot' && !editingItem ? (
                       <><Upload size={14} /> Upload to vault</>
                     ) : (
-                      'Save to vault'
+                      editingItem ? 'Update' : 'Save to vault'
                     )}
                   </button>
-                  <button className="btn-ghost" onClick={() => setShowForm(false)} disabled={submitting}>Cancel</button>
+                  <button className="btn-ghost" onClick={() => { setShowForm(false); resetForms(); }} disabled={submitting}>Cancel</button>
                 </div>
               </motion.div>
             )}
@@ -453,13 +509,22 @@ const VaultPage = memo(() => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <button
-                    onClick={() => void handleDelete(item)}
-                    className="absolute top-4 right-4 text-phantom-text-muted hover:text-phantom-danger transition-colors opacity-0 group-hover:opacity-100"
-                    aria-label="Delete"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleEdit(item)}
+                      className="text-phantom-text-muted hover:text-phantom-lime transition-colors"
+                      aria-label="Edit"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    <button
+                      onClick={() => void handleDelete(item)}
+                      className="text-phantom-text-muted hover:text-phantom-danger transition-colors"
+                      aria-label="Delete"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
 
                   <div className="flex items-center gap-2 mb-3">
                     <span className={TYPE_BADGE[item.proof_type]}>{TYPE_LABELS[item.proof_type]}</span>

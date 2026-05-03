@@ -1,5 +1,5 @@
 import { memo, useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Loader, Sparkles, CheckCircle, Upload, Linkedin } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useProjects } from '@/contexts/ProjectContext'
@@ -14,10 +14,16 @@ import {
   completePhase,
 } from '@/lib/functions'
 import GeneratorPanel from '@/components/app/GeneratorPanel'
+import { ProtectedContent } from '@/components/ui/ProtectedContent'
+import { useProtection } from '@/hooks'
 
 const PhaseIdentify = memo(() => {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { currentProject, ghostIdentity } = useProjects()
+
+  // Enable protection for AI-generated content
+  useProtection({ disableRightClick: true, monitorCopy: true })
 
   // Local form state
   const [problemDraft, setProblemDraft] = useState('')
@@ -159,6 +165,8 @@ const PhaseIdentify = memo(() => {
       'checklist.voice_defined': voice.length > 0,
       updated_at: new Date().toISOString(),
     })
+    // Show success feedback
+    alert('Positioning selections saved successfully!')
   }
 
   // ========================================
@@ -170,9 +178,12 @@ const PhaseIdentify = memo(() => {
     setError('')
     try {
       await completePhase({ project_id: id!, phase: 1 })
-      // Phase completion triggers backend to advance current_phase
+      // Navigate to Phase 2
+      navigate(`/project/${id}/test`)
     } catch (err) {
-      setError((err as Error).message)
+      console.error('Complete phase error:', err)
+      const message = err instanceof Error ? err.message : 'Failed to complete phase'
+      setError(message)
       setCompletingPhase(false)
     }
   }
@@ -245,7 +256,7 @@ const PhaseIdentify = memo(() => {
 
         {/* AI-generated options */}
         {ghostIdentity.ai_problem_options && ghostIdentity.ai_problem_options.length > 0 && (
-          <div className="space-y-3 mt-5 pt-5 border-t border-phantom-border-subtle">
+          <ProtectedContent watermark disableSelect className="space-y-3 mt-5 pt-5 border-t border-phantom-border-subtle">
             <p className="label text-phantom-lime mb-3">AI-Refined Options</p>
             {ghostIdentity.ai_problem_options.map((option, i) => (
               <label
@@ -272,7 +283,7 @@ const PhaseIdentify = memo(() => {
                 </div>
               </label>
             ))}
-          </div>
+          </ProtectedContent>
         )}
       </div>
 
@@ -615,42 +626,115 @@ const PhaseIdentify = memo(() => {
               project_id: id,
             })
           }
-          renderResult={(out) => (
+          renderResult={(out) => {
+            // Debug: log the actual response
+            console.log('Audience language response:', out)
+            
+            // Safely handle the response - check if data is nested in 'output'
+            const data = out.output || out
+            
+            if (!data) return <p className="font-body text-[13px] text-phantom-text-muted">No results returned.</p>
+            
+            // Try multiple possible field name variations
+            const problemPhrases = data.problemPhrases || data.problem_phrases || []
+            const emotionalDescriptors = data.emotionalDescriptors || data.emotional_descriptors || []
+            const jargonToAvoid = data.jargonToAvoid || data.jargon_to_avoid || []
+            const examples = data.examples || []
+            const failedAttemptPhrases = data.failedAttemptPhrases || data.failed_attempt_phrases || []
+            const outcomePhrases = data.outcomePhrases || data.outcome_phrases || []
+            
+            // Check if we have any data at all
+            const hasData = problemPhrases.length > 0 || emotionalDescriptors.length > 0 || 
+                           jargonToAvoid.length > 0 || examples.length > 0 ||
+                           failedAttemptPhrases.length > 0 || outcomePhrases.length > 0
+            
+            if (!hasData) {
+              return (
+                <div className="space-y-3">
+                  <div className="bg-phantom-warning/10 border border-phantom-warning/30 rounded p-3">
+                    <p className="font-body text-[13px] text-phantom-warning">
+                      No audience language data was generated. The AI may need more context.
+                    </p>
+                  </div>
+                  <details className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+                    <summary className="font-body text-[12px] text-phantom-text-secondary cursor-pointer">
+                      Debug: View raw response
+                    </summary>
+                    <pre className="font-code text-[10px] text-phantom-text-muted mt-2 overflow-auto">
+                      {JSON.stringify(out, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              )
+            }
+            
+            return (
             <div className="space-y-4">
+              {problemPhrases.length > 0 && (
               <div>
                 <p className="label text-phantom-lime mb-2">Problem phrases</p>
                 <div className="flex flex-wrap gap-2">
-                  {out.problemPhrases.map((p, i) => (
+                  {problemPhrases.map((p, i) => (
                     <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-black/40 border border-phantom-border-subtle rounded">
                       {p}
                     </span>
                   ))}
                 </div>
               </div>
+              )}
+              {emotionalDescriptors.length > 0 && (
               <div>
                 <p className="label text-phantom-lime mb-2">Emotional descriptors</p>
                 <div className="flex flex-wrap gap-2">
-                  {out.emotionalDescriptors.map((p, i) => (
+                  {emotionalDescriptors.map((p, i) => (
                     <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-black/40 border border-phantom-border-subtle rounded">
                       {p}
                     </span>
                   ))}
                 </div>
               </div>
+              )}
+              {failedAttemptPhrases.length > 0 && (
+              <div>
+                <p className="label text-phantom-lime mb-2">Failed attempt phrases</p>
+                <div className="flex flex-wrap gap-2">
+                  {failedAttemptPhrases.map((p, i) => (
+                    <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-black/40 border border-phantom-border-subtle rounded">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              )}
+              {outcomePhrases.length > 0 && (
+              <div>
+                <p className="label text-phantom-lime mb-2">Outcome phrases</p>
+                <div className="flex flex-wrap gap-2">
+                  {outcomePhrases.map((p, i) => (
+                    <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-black/40 border border-phantom-border-subtle rounded">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              )}
+              {jargonToAvoid.length > 0 && (
               <div>
                 <p className="label text-phantom-lime mb-2">Jargon to avoid</p>
                 <div className="flex flex-wrap gap-2">
-                  {out.jargonToAvoid.map((p, i) => (
+                  {jargonToAvoid.map((p, i) => (
                     <span key={i} className="badge text-[12px] px-2 py-1 bg-phantom-danger/10 border border-phantom-danger/30 rounded text-phantom-danger">
                       {p}
                     </span>
                   ))}
                 </div>
               </div>
+              )}
+              {examples.length > 0 && (
               <div>
                 <p className="label text-phantom-lime mb-2">Verbatim examples</p>
                 <div className="space-y-2">
-                  {out.examples.map((ex, i) => (
+                  {examples.map((ex, i) => (
                     <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
                       <p className="font-body text-[13px] text-phantom-text-primary mb-1">"{ex.verbatim}"</p>
                       <p className="font-body text-[11px] text-phantom-text-muted">{ex.whereSaid}</p>
@@ -658,11 +742,13 @@ const PhaseIdentify = memo(() => {
                   ))}
                 </div>
               </div>
+              )}
               <p className="font-body text-[11px] text-phantom-text-muted">
                 Saved to your project. You'll see these again in Phase 02 when you write outreach.
               </p>
             </div>
-          )}
+            )
+          }}
         />
       </div>
 
@@ -686,12 +772,30 @@ const PhaseIdentify = memo(() => {
               project_id: id,
             })
           }
-          renderResult={(out) => (
+          renderResult={(out) => {
+            // Handle nested output structure
+            const data = out.output || out
+            
+            if (!data || !data.locations) {
+              return (
+                <div className="bg-phantom-warning/10 border border-phantom-warning/30 rounded p-3">
+                  <p className="font-body text-[13px] text-phantom-warning">
+                    No communities found. Try adjusting your problem statement or audience description.
+                  </p>
+                </div>
+              )
+            }
+            
+            const locations = data.locations || []
+            const searchQueries = data.searchQueries || data.search_queries || []
+            
+            return (
             <div className="space-y-4">
+              {locations.length > 0 && (
               <div>
                 <p className="label text-phantom-lime mb-2">Top communities</p>
                 <div className="space-y-2">
-                  {out.locations.map((loc, i) => (
+                  {locations.map((loc, i) => (
                     <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
                       <div className="flex items-start justify-between gap-3 mb-1">
                         <div>
@@ -720,21 +824,25 @@ const PhaseIdentify = memo(() => {
                   ))}
                 </div>
               </div>
+              )}
+              {searchQueries.length > 0 && (
               <div>
                 <p className="label text-phantom-lime mb-2">Search queries to find more</p>
                 <div className="space-y-1">
-                  {out.searchQueries.map((q, i) => (
+                  {searchQueries.map((q, i) => (
                     <div key={i} className="bg-phantom-black/40 border border-phantom-border-subtle rounded px-3 py-2">
                       <p className="font-code text-[12px] text-phantom-text-secondary">{q}</p>
                     </div>
                   ))}
                 </div>
               </div>
+              )}
               <p className="font-body text-[11px] text-phantom-text-muted">
                 Saved. These appear in Phase 02 as your test locations.
               </p>
             </div>
-          )}
+            )
+          }}
         />
       </div>
 

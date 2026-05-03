@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Plus, Loader, ExternalLink, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -18,9 +18,12 @@ import {
   completePhase,
 } from '@/lib/functions'
 import GeneratorPanel from '@/components/app/GeneratorPanel'
+import { ProtectedContent } from '@/components/ui/ProtectedContent'
+import { useProtection } from '@/hooks'
 
 const PhaseIterate = memo(() => {
   const { id } = useParams()
+  const navigate = useNavigate()
   const projectId = id!
   const {
     currentProject,
@@ -29,6 +32,9 @@ const PhaseIterate = memo(() => {
     silentTest,
     ghostIdentity,
   } = useProjects()
+
+  // Enable protection for AI-generated content
+  useProtection({ disableRightClick: true, monitorCopy: true })
 
   const ilRef = doc(db, 'projects', projectId, 'iteration_loop', 'main')
 
@@ -123,6 +129,7 @@ const PhaseIterate = memo(() => {
     setCompletionError(null)
     try {
       await completePhase({ project_id: projectId, phase: 3 })
+      navigate(`/project/${projectId}/lock`)
     } catch (err) {
       setCompletionError(err instanceof Error ? err.message : 'Could not advance phase.')
       setCompleting(false)
@@ -172,7 +179,8 @@ const PhaseIterate = memo(() => {
           cta="Run diagnosis"
           run={() => diagnoseOffer({ project_id: projectId })}
           renderResult={(out) => (
-            <div className="space-y-3">
+            <ProtectedContent watermark disableSelect>
+              <div className="space-y-3">
               <div className="bg-phantom-warning/10 border border-phantom-warning/30 rounded p-3">
                 <p className="label text-phantom-warning mb-2">Diagnosis</p>
                 <p className="font-body text-[14px] text-phantom-text-primary mb-2">{out.diagnosis}</p>
@@ -189,6 +197,7 @@ const PhaseIterate = memo(() => {
                 Diagnosis saved. Marks "diagnosis done" complete on the checklist.
               </p>
             </div>
+            </ProtectedContent>
           )}
         />
       </div>
@@ -207,7 +216,8 @@ const PhaseIterate = memo(() => {
           cta="Suggest"
           run={() => suggestIteration({ project_id: projectId })}
           renderResult={(out) => (
-            <div className="space-y-3">
+            <ProtectedContent watermark disableSelect>
+              <div className="space-y-3">
               <div className="bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
                 <p className="label text-phantom-lime mb-1">Variable to change</p>
                 <p className="font-body text-[14px] text-phantom-text-primary">{out.variable_to_change}</p>
@@ -236,6 +246,7 @@ const PhaseIterate = memo(() => {
                 </div>
               )}
             </div>
+            </ProtectedContent>
           )}
         />
       </div>
@@ -272,7 +283,8 @@ const PhaseIterate = memo(() => {
             })
           }
           renderResult={(out) => (
-            <div className="space-y-3">
+            <ProtectedContent watermark disableSelect>
+              <div className="space-y-3">
               <p className="font-body text-[13px] text-phantom-text-secondary">
                 Primary wedge: <span className="text-phantom-lime font-medium">{out.primary_wedge}</span>
               </p>
@@ -312,6 +324,7 @@ const PhaseIterate = memo(() => {
                 ))}
               </div>
             </div>
+            </ProtectedContent>
           )}
         />
       </div>

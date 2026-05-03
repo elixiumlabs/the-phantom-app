@@ -259,3 +259,31 @@
   100% { transform: translate(0, 5px) scale(0.1);  opacity: 0; box-shadow: 0 10px 20px rgba(137, 243, 54, 0); }
 }
 .ease-out-expo { transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Anti-scraping protection */
+.protected-content {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.protected-content::before {
+  content: attr(data-watermark);
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 1px;
+  opacity: 0.01;
+  pointer-events: none;
+}
+
+/* Prevent drag-and-drop extraction */
+img, svg {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
