@@ -136,7 +136,7 @@ const CORE_TOOLS = [
     icon: FileText,
     name: 'Template Library',
     description: 'Pre-written cold outreach emails, sales page copy, and positioning frameworks. Conversion-tested, ready to customize. No more staring at a blank page.',
-    image: '/placeholder-templates.jpg',
+    image: 'https://storage.googleapis.com/phantom-app/templates.png',
   },
   {
     icon: BarChart3,

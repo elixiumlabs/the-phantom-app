@@ -30,6 +30,8 @@ import SettingsPage from '@/pages/app/SettingsPage'
 import VaultPage from '@/pages/app/VaultPage'
 import SignalTrackerPage from '@/pages/app/SignalTrackerPage'
 import TemplatesPage from '@/pages/app/TemplatesPage'
+import ValidationDashboardPage from '@/pages/app/ValidationDashboardPage'
+import AIBrandAssistantPage from '@/pages/app/AIBrandAssistantPage'
 import BlogPage from '@/pages/BlogPage'
 import RefundPolicyPage from '@/pages/RefundPolicyPage'
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage'
@@ -142,6 +144,14 @@ const AppRoutes = memo(() => (
 
     <Route path="/templates" element={
       <RequireAuth><TemplatesPage /></RequireAuth>
+    } />
+
+    <Route path="/validation" element={
+      <RequireAuth><ValidationDashboardPage /></RequireAuth>
+    } />
+
+    <Route path="/assistant" element={
+      <RequireAuth><AIBrandAssistantPage /></RequireAuth>
     } />
 
     <Route path="/settings" element={

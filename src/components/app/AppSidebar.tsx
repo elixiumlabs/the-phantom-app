@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Shield, Activity, FileText, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Shield, Activity, FileText, Settings, LogOut, BarChart3, Sparkles } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects } from '@/contexts/ProjectContext'
 
@@ -12,6 +12,8 @@ const NAV_TOOLS = [
   { label: 'Proof Vault',     href: '/vault',      icon: Shield   },
   { label: 'Signal Tracker',  href: '/signals',    icon: Activity },
   { label: 'Templates',       href: '/templates',  icon: FileText },
+  { label: 'Validation Dashboard', href: '/validation', icon: BarChart3 },
+  { label: 'AI Brand Assistant',   href: '/assistant',  icon: Sparkles  },
 ]
 
 const NAV_ACCOUNT = [
