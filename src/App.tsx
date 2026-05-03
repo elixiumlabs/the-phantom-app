@@ -150,6 +150,10 @@ const AppRoutes = memo(() => (
       <RequireAuth><ValidationDashboardPage /></RequireAuth>
     } />
 
+    <Route path="/validation/:id" element={
+      <RequireAuth><ValidationDashboardPage /></RequireAuth>
+    } />
+
     <Route path="/assistant" element={
       <RequireAuth><AIBrandAssistantPage /></RequireAuth>
     } />

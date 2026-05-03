@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react'
-import { Activity, AlertTriangle, BarChart3, Database, Loader, MessageSquareWarning, TrendingUp } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Activity, AlertTriangle, BarChart3, ChevronLeft, ChevronRight, Database, Loader, MessageSquareWarning, TrendingUp } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { collectionGroup, onSnapshot, orderBy, query, where, type Unsubscribe } from 'firebase/firestore'
 import { useAuth } from '@/contexts/AuthContext'
@@ -21,12 +22,43 @@ function toDate(v: string | undefined) {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
+function dayKey(d: Date) {
+  return d.toISOString().slice(0, 10)
+}
+
 const ValidationDashboardPage = memo(() => {
+  const { id } = useParams()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { projects, proofVault } = useProjects()
   const [rows, setRows] = useState<OutreachLog[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+  const [objectionsPage, setObjectionsPage] = useState(1)
+  const [conversionsPage, setConversionsPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const ITEMS_PER_PAGE = 5
+
+  useEffect(() => {
+    if (!projects.length) {
+      setSelectedProjectId('')
+      return
+    }
+    if (id && projects.some((p) => p.id === id)) {
+      setSelectedProjectId(id)
+      return
+    }
+    if (!selectedProjectId || !projects.some((p) => p.id === selectedProjectId)) {
+      setSelectedProjectId(projects[0].id)
+    }
+  }, [projects, selectedProjectId, id])
+
+  useEffect(() => {
+    if (!selectedProjectId) return
+    if (id !== selectedProjectId) {
+      navigate(`/validation/${selectedProjectId}`, { replace: true })
+    }
+  }, [id, selectedProjectId, navigate])
 
   useEffect(() => {
     if (!user) {
@@ -94,25 +126,16 @@ const ValidationDashboardPage = memo(() => {
 
   const activeProjects = useMemo(() => projects.filter((p) => p.status === 'active'), [projects])
   const projectMap = useMemo(() => Object.fromEntries(projects.map((p) => [p.id, p])), [projects])
+  const selectedProject = useMemo(() => projects.find((p) => p.id === selectedProjectId) ?? null, [projects, selectedProjectId])
+  const scopedRows = useMemo(() => rows.filter((r) => r.project_id === selectedProjectId), [rows, selectedProjectId])
 
   const now = new Date()
   const dayMs = 24 * 60 * 60 * 1000
-  const d7 = new Date(now.getTime() - 7 * dayMs)
-  const d30 = new Date(now.getTime() - 30 * dayMs)
 
-  const rows7 = rows.filter((r) => {
-    const dt = toDate(r.created_at)
-    return dt ? dt >= d7 : false
-  })
-  const rows30 = rows.filter((r) => {
-    const dt = toDate(r.created_at)
-    return dt ? dt >= d30 : false
-  })
-
-  const totalOutreach = rows.length
-  const totalConversions = rows.filter((r) => r.converted).length
-  const totalReplies = rows.filter((r) => r.responded && !r.converted).length
-  const totalObjections = rows.filter((r) => r.objection.trim().length > 0).length
+  const totalOutreach = scopedRows.length
+  const totalConversions = scopedRows.filter((r) => r.converted).length
+  const totalReplies = scopedRows.filter((r) => r.responded && !r.converted).length
+  const totalObjections = scopedRows.filter((r) => r.objection.trim().length > 0).length
   const totalProof = proofVault.length
 
   const conversionRate = totalOutreach > 0 ? (totalConversions / totalOutreach) * 100 : 0
@@ -120,12 +143,9 @@ const ValidationDashboardPage = memo(() => {
   const objectionRate = totalOutreach > 0 ? (totalObjections / totalOutreach) * 100 : 0
   const proofPerConversion = totalConversions > 0 ? totalProof / totalConversions : 0
 
-  const conv7 = rows7.length > 0 ? (rows7.filter((r) => r.converted).length / rows7.length) * 100 : 0
-  const conv30 = rows30.length > 0 ? (rows30.filter((r) => r.converted).length / rows30.length) * 100 : 0
-
   const projectStats = useMemo(() => {
     const grouped: Record<string, { outreach: number; conversions: number; replies: number; objections: number }> = {}
-    rows.forEach((r) => {
+    scopedRows.forEach((r) => {
       grouped[r.project_id] ??= { outreach: 0, conversions: 0, replies: 0, objections: 0 }
       grouped[r.project_id].outreach += 1
       if (r.converted) grouped[r.project_id].conversions += 1
@@ -141,17 +161,17 @@ const ValidationDashboardPage = memo(() => {
         convRate: s.outreach > 0 ? (s.conversions / s.outreach) * 100 : 0,
       }))
       .sort((a, b) => b.convRate - a.convRate)
-  }, [rows, projectMap])
+  }, [scopedRows, projectMap])
 
   const objectionPatterns = useMemo(() => {
     const map: Record<string, number> = {}
-    rows.forEach((r) => {
+    scopedRows.forEach((r) => {
       const key = r.objection.trim()
       if (!key) return
       map[key] = (map[key] ?? 0) + 1
     })
     return Object.entries(map).sort(([, a], [, b]) => b - a).slice(0, 5)
-  }, [rows])
+  }, [scopedRows])
 
   const proofTypeBreakdown = useMemo(() => {
     const map: Record<ProofVaultItem['proof_type'], number> = {
@@ -173,6 +193,86 @@ const ValidationDashboardPage = memo(() => {
     return Object.entries(map).filter(([, c]) => c > 0).sort(([, a], [, b]) => b - a)
   }, [proofVault])
 
+  const dailySeries = useMemo(() => {
+    const days = 14
+    const start = new Date(now.getTime() - (days - 1) * dayMs)
+    const map: Record<string, { outreach: number; replies: number; conversions: number }> = {}
+
+    for (let i = 0; i < days; i += 1) {
+      const dt = new Date(start.getTime() + i * dayMs)
+      map[dayKey(dt)] = { outreach: 0, replies: 0, conversions: 0 }
+    }
+
+    scopedRows.forEach((r) => {
+      const dt = toDate(r.created_at)
+      if (!dt) return
+      const key = dayKey(dt)
+      if (!map[key]) return
+      map[key].outreach += 1
+      if (r.responded && !r.converted) map[key].replies += 1
+      if (r.converted) map[key].conversions += 1
+    })
+
+    return Object.entries(map).map(([date, v]) => ({
+      date,
+      outreach: v.outreach,
+      replies: v.replies,
+      conversions: v.conversions,
+      convRate: v.outreach > 0 ? (v.conversions / v.outreach) * 100 : 0,
+    }))
+  }, [scopedRows, now, dayMs])
+
+  const dailyGrid = useMemo(() => {
+    return dailySeries.map((d, idx, arr) => {
+      const start = Math.max(0, idx - 6)
+      const window = arr.slice(start, idx + 1)
+      const movingAvg = window.length > 0 ? window.reduce((sum, x) => sum + x.convRate, 0) / window.length : 0
+      return {
+        ...d,
+        movingAvg,
+      }
+    })
+  }, [dailySeries])
+
+  const topConvertingDetails = useMemo(() => {
+    const converted = scopedRows.filter((r) => r.converted)
+    const map: Record<string, number> = {}
+
+    converted.forEach((r) => {
+      const detail = r.notes.trim() || 'Converted lead (no detail logged)'
+      map[detail] = (map[detail] ?? 0) + 1
+    })
+
+    return Object.entries(map)
+      .map(([detail, count]) => ({
+        detail,
+        count,
+        share: converted.length > 0 ? (count / converted.length) * 100 : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+  }, [scopedRows])
+
+  const objectionsTotalPages = Math.max(1, Math.ceil(objectionPatterns.length / ITEMS_PER_PAGE))
+  const conversionsTotalPages = Math.max(1, Math.ceil(topConvertingDetails.length / ITEMS_PER_PAGE))
+
+  const pagedObjections = useMemo(() => {
+    const start = (objectionsPage - 1) * ITEMS_PER_PAGE
+    return objectionPatterns.slice(start, start + ITEMS_PER_PAGE)
+  }, [objectionPatterns, objectionsPage])
+
+  const pagedConversions = useMemo(() => {
+    const start = (conversionsPage - 1) * ITEMS_PER_PAGE
+    return topConvertingDetails.slice(start, start + ITEMS_PER_PAGE)
+  }, [topConvertingDetails, conversionsPage])
+
+  useEffect(() => {
+    if (objectionsPage > objectionsTotalPages) setObjectionsPage(objectionsTotalPages)
+  }, [objectionsPage, objectionsTotalPages])
+
+  useEffect(() => {
+    if (conversionsPage > conversionsTotalPages) setConversionsPage(conversionsTotalPages)
+  }, [conversionsPage, conversionsTotalPages])
+
   return (
     <div className="flex min-h-screen bg-phantom-black">
       <AppSidebar />
@@ -181,6 +281,21 @@ const ValidationDashboardPage = memo(() => {
           <div className="mb-10">
             <h1 className="font-display font-bold text-[28px] text-phantom-text-primary mb-1">Validation Dashboard</h1>
             <p className="font-body text-[14px] text-phantom-text-secondary">Production metrics from live outreach and proof data.</p>
+            <div className="mt-4 max-w-sm">
+              <label className="label text-phantom-text-secondary mb-2 block">Project</label>
+              <select className="input" value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
+                {projects.length === 0 ? (
+                  <option value="">No projects</option>
+                ) : (
+                  projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))
+                )}
+              </select>
+              {selectedProject && (
+                <p className="font-body text-[12px] text-phantom-text-muted mt-2">Viewing: {selectedProject.name}</p>
+              )}
+            </div>
           </div>
 
           {loading && (
@@ -212,29 +327,103 @@ const ValidationDashboardPage = memo(() => {
             ))}
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-6 mb-8">
-            <div className="card">
-              <p className="label mb-3">Trend snapshot</p>
-              <div className="space-y-2 text-[13px] font-body text-phantom-text-secondary">
-                <p>Last 7 days conversion: <span className="text-phantom-lime">{conv7.toFixed(1)}%</span></p>
-                <p>Last 30 days conversion: <span className="text-phantom-lime">{conv30.toFixed(1)}%</span></p>
-                <p>Delta (7d vs 30d): <span className={conv7 >= conv30 ? 'text-phantom-lime' : 'text-phantom-warning'}>{(conv7 - conv30).toFixed(1)}%</span></p>
-              </div>
+<div className="card mb-8 flex flex-col">
+            <p className="label mb-3">14-day conversion trend</p>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px]">
+                <thead>
+                  <tr className="border-b border-phantom-border-subtle">
+                    {['Date', 'Outreach', 'Replies', 'Conversions', 'Conversion %', '7d avg'].map((h) => (
+                      <th key={h} className="text-left py-2 pr-4 font-ui text-[11px] uppercase tracking-wider text-phantom-text-muted">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {dailyGrid.map((d) => (
+                    <tr key={d.date} className="border-b border-phantom-border-subtle/40">
+                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.date}</td>
+                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.outreach}</td>
+                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.replies}</td>
+                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.conversions}</td>
+                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-lime">{d.convRate.toFixed(1)}%</td>
+                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.movingAvg.toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          </div>
 
-            <div className="card">
+          <div className="grid lg:grid-cols-2 gap-6 mb-8">
+<div className="card flex flex-col">
               <p className="label mb-3 flex items-center gap-2"><MessageSquareWarning size={13} /> Top objections</p>
               {objectionPatterns.length === 0 ? (
                 <p className="font-body text-[13px] text-phantom-text-muted">No objection patterns yet.</p>
               ) : (
-                <div className="space-y-2">
-                  {objectionPatterns.map(([objection, count]) => (
-                    <div key={objection} className="flex items-start justify-between gap-4">
+                <>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {pagedObjections.map(([objection]) => (
+                    <div key={objection} className="flex items-start gap-4">
                       <p className="font-body text-[13px] text-phantom-text-secondary">{objection}</p>
-                      <span className="badge">{count}×</span>
                     </div>
                   ))}
                 </div>
+                <div className="mt-auto pt-3 flex items-center justify-between">
+                  <button
+                    className="btn-secondary h-7 w-7 p-0 inline-flex items-center justify-center"
+                    aria-label="Previous objections page"
+                    disabled={objectionsPage <= 1}
+                    onClick={() => setObjectionsPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <p className="font-body text-[11px] text-phantom-text-muted">Page {objectionsPage} / {objectionsTotalPages}</p>
+                  <button
+                    className="btn-secondary h-7 w-7 p-0 inline-flex items-center justify-center"
+                    aria-label="Next objections page"
+                    disabled={objectionsPage >= objectionsTotalPages}
+                    onClick={() => setObjectionsPage((p) => Math.min(objectionsTotalPages, p + 1))}
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+                </>
+              )}
+            </div>
+
+            <div className="card flex flex-col">
+              <p className="label mb-3 flex items-center gap-2"><TrendingUp size={13} /> Top conversions</p>
+              {topConvertingDetails.length === 0 ? (
+                <p className="font-body text-[13px] text-phantom-text-muted">No conversions logged yet.</p>
+              ) : (
+                <>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {pagedConversions.map((s) => (
+                    <div key={s.detail} className="flex items-start gap-4">
+                      <p className="font-body text-[13px] text-phantom-text-secondary">{s.detail}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-auto pt-3 flex items-center justify-between">
+                  <button
+                    className="btn-secondary h-7 w-7 p-0 inline-flex items-center justify-center"
+                    aria-label="Previous conversions page"
+                    disabled={conversionsPage <= 1}
+                    onClick={() => setConversionsPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <p className="font-body text-[11px] text-phantom-text-muted">Page {conversionsPage} / {conversionsTotalPages}</p>
+                  <button
+                    className="btn-secondary h-7 w-7 p-0 inline-flex items-center justify-center"
+                    aria-label="Next conversions page"
+                    disabled={conversionsPage >= conversionsTotalPages}
+                    onClick={() => setConversionsPage((p) => Math.min(conversionsTotalPages, p + 1))}
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+                </>
               )}
             </div>
           </div>
@@ -264,13 +453,42 @@ const ValidationDashboardPage = memo(() => {
                 <div className="space-y-2">
                   {proofTypeBreakdown.slice(0, 8).map(([type, count]) => (
                     <div key={type} className="flex items-center justify-between text-[13px]">
-                      <p className="font-body text-phantom-text-secondary">{type.split('_').join(' ')}</p>
+                      <p className="font-body text-phantom-text-secondary">{type.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
                       <span className="font-code text-phantom-lime">{count}</span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
+          </div>
+
+          <div className="card mt-6 overflow-x-auto">
+            <p className="label mb-3">Project metrics grid</p>
+            {projectStats.length === 0 ? (
+              <p className="font-body text-[13px] text-phantom-text-muted">No rows yet. Start logging outreach to populate this grid.</p>
+            ) : (
+              <table className="w-full min-w-[760px]">
+                <thead>
+                  <tr className="border-b border-phantom-border-subtle">
+                    {['Project', 'Outreach', 'Replies', 'Conversions', 'Conv %', 'Objections'].map((h) => (
+                      <th key={h} className="text-left py-2 pr-4 font-ui text-[11px] uppercase tracking-wider text-phantom-text-muted">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {projectStats.map((p) => (
+                    <tr key={p.projectId} className="border-b border-phantom-border-subtle/40">
+                      <td className="py-2 pr-4 font-body text-[13px] text-phantom-text-secondary">{p.name}</td>
+                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{p.outreach}</td>
+                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{p.replies}</td>
+                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{p.conversions}</td>
+                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-lime">{p.convRate.toFixed(1)}%</td>
+                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{p.objections}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </motion.div>
       </main>
