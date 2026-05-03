@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import TypewriterTitle from './TypewriterTitle'
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 8 },
@@ -30,12 +31,11 @@ const HeroSection = memo(() => (
 
     {/* Headline */}
     <motion.h1
-      className="font-display font-bold text-phantom-text-primary max-w-4xl mx-auto mb-6 relative z-10 tracking-normal"
+      className="font-display font-bold text-phantom-text-primary max-w-4xl mx-auto mb-6 tracking-normal relative z-10"
       style={{ fontSize: 'clamp(36px, 7vw, 72px)', lineHeight: 1.05 }}
       {...fadeUp(0.1)}
     >
-      Build invisible.<br />
-      Launch inevitable.
+      Build invisible.<br />Launch inevitable.
     </motion.h1>
 
     {/* Subheadline */}
