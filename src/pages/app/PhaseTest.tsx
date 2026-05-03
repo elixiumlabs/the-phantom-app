@@ -276,6 +276,7 @@ const PhaseTest = memo(() => {
 
   const allGatePassed =
     !!checklist.offer_built &&
+    !!checklist.sales_page_built &&
     !!checklist.parameters_set &&
     targetMet &&
     total > 0 &&
@@ -530,7 +531,164 @@ const PhaseTest = memo(() => {
         )}
       </div>
 
-      {/* Section 3 — Outreach Generator */}
+      {/* Section 3 — Sales Page Templates */}
+      <div className="card mb-6">
+        <p className="label mb-4">Sales Page Templates</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-5">
+          Pre-built, conversion-tested templates for one-page sales pages. Headline, problem, promise, proof, price, button. If you cannot sell it on one page, adding more will not help.
+        </p>
+
+        <div className="mb-5">
+          <p className="label text-phantom-text-secondary mb-3">Choose a template</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[
+              { id: 'direct', name: 'Direct', desc: 'Outcome-first, no story' },
+              { id: 'problem_first', name: 'Problem-First', desc: 'Agitate before solving' },
+              { id: 'transformation', name: 'Transformation', desc: 'Before/after framing' },
+            ].map((template) => (
+              <button
+                key={template.id}
+                onClick={() => loadTemplate(template.id)}
+                className={`p-4 rounded border text-left transition-colors ${
+                  selectedTemplate === template.id
+                    ? 'border-phantom-lime bg-phantom-lime/5'
+                    : 'border-phantom-border hover:border-phantom-lime/40'
+                }`}
+              >
+                <p className="font-display font-semibold text-[14px] text-phantom-text-primary mb-1">
+                  {template.name}
+                </p>
+                <p className="font-body text-[12px] text-phantom-text-muted">{template.desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {selectedTemplate && (
+          <div className="space-y-4 pt-5 border-t border-phantom-border-subtle">
+            <p className="label text-phantom-lime mb-3">Customize your sales page</p>
+            
+            <div>
+              <label className="label text-phantom-text-secondary mb-2 block">Headline</label>
+              <input
+                className="input"
+                value={salesPageData.headline}
+                onChange={(e) => setSalesPageData({ ...salesPageData, headline: e.target.value })}
+                placeholder="The main promise in 10 words or less"
+              />
+            </div>
+
+            <div>
+              <label className="label text-phantom-text-secondary mb-2 block">Subheadline</label>
+              <input
+                className="input"
+                value={salesPageData.subheadline}
+                onChange={(e) => setSalesPageData({ ...salesPageData, subheadline: e.target.value })}
+                placeholder="Clarify or add credibility"
+              />
+            </div>
+
+            <div>
+              <label className="label text-phantom-text-secondary mb-2 block">Problem</label>
+              <textarea
+                className="input min-h-[100px]"
+                value={salesPageData.problem}
+                onChange={(e) => setSalesPageData({ ...salesPageData, problem: e.target.value })}
+                placeholder="What specific problem does this solve? Why have other solutions failed?"
+              />
+            </div>
+
+            <div>
+              <label className="label text-phantom-text-secondary mb-2 block">Promise</label>
+              <textarea
+                className="input min-h-[120px]"
+                value={salesPageData.promise}
+                onChange={(e) => setSalesPageData({ ...salesPageData, promise: e.target.value })}
+                placeholder="What they get, how it works, what is included"
+              />
+            </div>
+
+            <div>
+              <label className="label text-phantom-text-secondary mb-2 block">Proof</label>
+              <textarea
+                className="input min-h-[100px]"
+                value={salesPageData.proof}
+                onChange={(e) => setSalesPageData({ ...salesPageData, proof: e.target.value })}
+                placeholder="Testimonials, case studies, results from Phase 1 testing"
+              />
+            </div>
+
+            <div>
+              <label className="label text-phantom-text-secondary mb-2 block">Price</label>
+              <input
+                className="input"
+                value={salesPageData.price}
+                onChange={(e) => setSalesPageData({ ...salesPageData, price: e.target.value })}
+                placeholder="$297 — one-time payment"
+              />
+            </div>
+
+            <div>
+              <label className="label text-phantom-text-secondary mb-2 block">Call to Action</label>
+              <input
+                className="input"
+                value={salesPageData.cta}
+                onChange={(e) => setSalesPageData({ ...salesPageData, cta: e.target.value })}
+                placeholder="Get [offer name] now"
+              />
+            </div>
+
+            <button className="btn-secondary" onClick={saveSalesPage}>
+              Save sales page
+            </button>
+
+            {salesPageData.headline && salesPageData.problem && salesPageData.cta && (
+              <div className="mt-5 pt-5 border-t border-phantom-border-subtle">
+                <p className="label text-phantom-lime mb-3">Preview</p>
+                <div className="bg-white text-black p-8 rounded">
+                  <h1 className="font-display font-bold text-[32px] mb-2">{salesPageData.headline}</h1>
+                  {salesPageData.subheadline && (
+                    <p className="font-body text-[18px] text-gray-600 mb-8">{salesPageData.subheadline}</p>
+                  )}
+                  
+                  {salesPageData.problem && (
+                    <div className="mb-8">
+                      <h2 className="font-display font-semibold text-[20px] mb-3">The Problem</h2>
+                      <p className="font-body text-[16px] whitespace-pre-wrap">{salesPageData.problem}</p>
+                    </div>
+                  )}
+                  
+                  {salesPageData.promise && (
+                    <div className="mb-8">
+                      <h2 className="font-display font-semibold text-[20px] mb-3">The Solution</h2>
+                      <p className="font-body text-[16px] whitespace-pre-wrap">{salesPageData.promise}</p>
+                    </div>
+                  )}
+                  
+                  {salesPageData.proof && (
+                    <div className="mb-8 bg-gray-50 p-6 rounded">
+                      <h2 className="font-display font-semibold text-[20px] mb-3">Proof</h2>
+                      <p className="font-body text-[16px] whitespace-pre-wrap">{salesPageData.proof}</p>
+                    </div>
+                  )}
+                  
+                  {salesPageData.price && (
+                    <div className="mb-8">
+                      <p className="font-display font-bold text-[28px]">{salesPageData.price}</p>
+                    </div>
+                  )}
+                  
+                  <button className="bg-black text-white font-display font-semibold text-[18px] px-8 py-4 rounded">
+                    {salesPageData.cta}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Section 4 — Outreach Generator */}
       <div className="card mb-6">
         <p className="label mb-2">Outreach Generator</p>
         <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
@@ -613,7 +771,7 @@ const PhaseTest = memo(() => {
         />
       </div>
 
-      {/* Section 4 — Outreach Log */}
+      {/* Section 5 — Outreach Log */}
       <div className="card mb-6">
         <div className="flex items-center justify-between mb-2">
           <p className="label">Outreach Log</p>
@@ -807,7 +965,7 @@ const PhaseTest = memo(() => {
         )}
       </div>
 
-      {/* Section 5 — Objection Library */}
+      {/* Section 6 — Objection Library */}
       <div className="card mb-6">
         <p className="label mb-2">Objection Library</p>
         <p className="font-body text-[14px] text-phantom-text-secondary mb-4">
@@ -865,6 +1023,7 @@ const PhaseTest = memo(() => {
         <div className="space-y-3 mb-6">
           {[
             { label: 'Minimum offer built', done: !!checklist.offer_built },
+            { label: 'Sales page created', done: !!checklist.sales_page_built },
             { label: 'Test parameters set and confirmed', done: !!checklist.parameters_set },
             {
               label: silentTest.test_sample_size

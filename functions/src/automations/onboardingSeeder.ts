@@ -58,13 +58,12 @@ export const completeOnboarding = onCall(
         created_at: nowTs,
         updated_at: nowTs,
       })
-    } else if (userSnap.data()?.onboarding_completed) {
-      throw new HttpsError('failed-precondition', 'Onboarding already completed')
     }
 
     // Recover from a prior partial run: if a project already exists for this
-    // user but the user doc never got flipped to onboarding_completed, finish
-    // the handshake by flipping the flag and returning the existing project.
+    // user, return it regardless of onboarding_completed flag. This handles
+    // cases where the user completed onboarding but the client never received
+    // the project_id, or they refreshed during the process.
     const existingActive = await db
       .collection('projects')
       .where('user_id', '==', uid)
@@ -73,18 +72,28 @@ export const completeOnboarding = onCall(
       .get()
     if (!existingActive.empty) {
       const existingId = existingActive.docs[0].id
-      await userRef.set(
-        {
-          onboarding_completed: true,
-          onboarding_meta: {
-            user_type: input.user_type,
-            built_in_public: input.built_in_public,
+      // Ensure onboarding_completed is set
+      if (!userSnap.data()?.onboarding_completed) {
+        await userRef.set(
+          {
+            onboarding_completed: true,
+            onboarding_meta: {
+              user_type: input.user_type,
+              built_in_public: input.built_in_public,
+            },
+            updated_at: admin.firestore.FieldValue.serverTimestamp(),
           },
-          updated_at: admin.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      )
+          { merge: true },
+        )
+      }
       return { project_id: existingId }
+    }
+
+    // If onboarding was already completed but no project exists, allow them to
+    // create one (this shouldn't happen but handles edge cases)
+    if (userSnap.data()?.onboarding_completed) {
+      // Don't throw error, just proceed to create the project
+      console.log(`User ${uid} has onboarding_completed=true but no project, creating one`)
     }
 
     await enforceFreeLimit(uid, 'active_projects', 0)

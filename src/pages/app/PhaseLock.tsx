@@ -147,6 +147,38 @@ const PhaseLock = memo(() => {
   const fiveConversionsMet = conversionsCount >= 5
   const threeProofMet = vaultItems.length >= 3
 
+  // ----- Launch Readiness Score -----
+  const calculateReadinessScore = () => {
+    let score = 0
+    
+    // Conversions (30 points max)
+    if (conversionsCount >= 10) score += 30
+    else if (conversionsCount >= 5) score += 20
+    else score += Math.floor((conversionsCount / 5) * 20)
+    
+    // Proof quality (25 points max)
+    const proofScore = Math.min(25, Math.floor((vaultItems.length / 3) * 25))
+    score += proofScore
+    
+    // Positioning stability (20 points max)
+    if (checklist.one_sentence_positioning) score += 20
+    
+    // Objections reduced (15 points max)
+    if (checklist.objections_mapped) score += 15
+    
+    // Brand identity complete (10 points max)
+    let brandScore = 0
+    if (checklist.brand_from_data) brandScore += 5
+    if (checklist.not_for_defined) brandScore += 5
+    score += brandScore
+    
+    return Math.min(100, score)
+  }
+  
+  const readinessScore = calculateReadinessScore()
+  const scoreColor = readinessScore >= 80 ? 'text-phantom-lime' : readinessScore >= 60 ? 'text-phantom-warning' : 'text-phantom-danger'
+  const scoreReady = readinessScore >= 80
+
   const allChecked =
     fiveConversionsMet &&
     !!checklist.one_sentence_positioning &&
@@ -589,7 +621,180 @@ const PhaseLock = memo(() => {
         />
       </div>
 
-      {/* Section 6 — Lock-in checklist */}
+      {/* Section 6 — Launch Readiness Score */}
+      <div className="card mb-6">
+        <p className="label mb-4">Launch Readiness Score</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-5">
+          Automated scoring based on conversions, proof quality, and positioning stability. If the score is below 80%, you are not ready. Keep iterating.
+        </p>
+
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <p className={`font-code font-bold text-[64px] leading-none ${scoreColor}`}>{readinessScore}</p>
+            <p className="font-body text-[12px] text-phantom-text-muted">out of 100</p>
+          </div>
+          <div className="text-right">
+            {scoreReady ? (
+              <div className="bg-phantom-lime/10 border border-phantom-lime/30 rounded px-4 py-2">
+                <p className="font-display font-semibold text-[16px] text-phantom-lime">Ready to launch</p>
+              </div>
+            ) : (
+              <div className="bg-phantom-warning/10 border border-phantom-warning/30 rounded px-4 py-2">
+                <p className="font-display font-semibold text-[16px] text-phantom-warning">Not ready yet</p>
+                <p className="font-body text-[12px] text-phantom-text-muted mt-1">Target: 80+</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-body text-[13px] text-phantom-text-secondary">Conversions</p>
+              <p className="font-code text-[13px] text-phantom-lime">{Math.min(30, conversionsCount >= 10 ? 30 : conversionsCount >= 5 ? 20 : Math.floor((conversionsCount / 5) * 20))}/30</p>
+            </div>
+            <div className="w-full bg-phantom-black rounded-full h-1.5">
+              <div className="bg-phantom-lime h-1.5 rounded-full" style={{ width: `${Math.min(100, (conversionsCount / 10) * 100)}%` }} />
+            </div>
+            <p className="font-body text-[11px] text-phantom-text-muted mt-1">{conversionsCount} conversions (target: 10+)</p>
+          </div>
+
+          <div className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-body text-[13px] text-phantom-text-secondary">Proof quality</p>
+              <p className="font-code text-[13px] text-phantom-lime">{Math.min(25, Math.floor((vaultItems.length / 3) * 25))}/25</p>
+            </div>
+            <div className="w-full bg-phantom-black rounded-full h-1.5">
+              <div className="bg-phantom-lime h-1.5 rounded-full" style={{ width: `${Math.min(100, (vaultItems.length / 3) * 100)}%` }} />
+            </div>
+            <p className="font-body text-[11px] text-phantom-text-muted mt-1">{vaultItems.length} proof items (target: 3+)</p>
+          </div>
+
+          <div className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-body text-[13px] text-phantom-text-secondary">Positioning stability</p>
+              <p className="font-code text-[13px] text-phantom-lime">{checklist.one_sentence_positioning ? 20 : 0}/20</p>
+            </div>
+            <div className="w-full bg-phantom-black rounded-full h-1.5">
+              <div className="bg-phantom-lime h-1.5 rounded-full" style={{ width: checklist.one_sentence_positioning ? '100%' : '0%' }} />
+            </div>
+            <p className="font-body text-[11px] text-phantom-text-muted mt-1">{checklist.one_sentence_positioning ? 'Complete' : 'Incomplete'}</p>
+          </div>
+
+          <div className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-body text-[13px] text-phantom-text-secondary">Objections reduced</p>
+              <p className="font-code text-[13px] text-phantom-lime">{checklist.objections_mapped ? 15 : 0}/15</p>
+            </div>
+            <div className="w-full bg-phantom-black rounded-full h-1.5">
+              <div className="bg-phantom-lime h-1.5 rounded-full" style={{ width: checklist.objections_mapped ? '100%' : '0%' }} />
+            </div>
+            <p className="font-body text-[11px] text-phantom-text-muted mt-1">{checklist.objections_mapped ? 'Complete' : 'Incomplete'}</p>
+          </div>
+
+          <div className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-body text-[13px] text-phantom-text-secondary">Brand identity</p>
+              <p className="font-code text-[13px] text-phantom-lime">{(checklist.brand_from_data ? 5 : 0) + (checklist.not_for_defined ? 5 : 0)}/10</p>
+            </div>
+            <div className="w-full bg-phantom-black rounded-full h-1.5">
+              <div className="bg-phantom-lime h-1.5 rounded-full" style={{ width: `${((checklist.brand_from_data ? 5 : 0) + (checklist.not_for_defined ? 5 : 0)) * 10}%` }} />
+            </div>
+            <p className="font-body text-[11px] text-phantom-text-muted mt-1">
+              {checklist.brand_from_data && checklist.not_for_defined ? 'Complete' : checklist.brand_from_data || checklist.not_for_defined ? 'Partial' : 'Incomplete'}
+            </p>
+          </div>
+        </div>
+
+        {!scoreReady && (
+          <div className="mt-4 bg-phantom-warning/10 border border-phantom-warning/30 rounded p-3">
+            <p className="font-body text-[13px] text-phantom-warning">
+              Your readiness score is {readinessScore}%. You need 80% or higher to launch. Focus on the incomplete areas above.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Section 7 — Brand Asset Generators */}
+      <div className="card mb-6">
+        <p className="label mb-4">Brand Asset Generators</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-5">
+          Generate public-facing assets from locked inputs. No more rewriting everything when the offer changes. It is already locked.
+        </p>
+
+        <div className="space-y-4">
+          {/* Homepage Copy */}
+          <div className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="font-display font-semibold text-[16px] text-phantom-text-primary mb-1">Homepage Copy</p>
+                <p className="font-body text-[12px] text-phantom-text-muted">Hero, problem, solution, proof, CTA</p>
+              </div>
+              <span className="badge">PRO</span>
+            </div>
+            <p className="font-body text-[13px] text-phantom-text-secondary mb-3">
+              Generates conversion-optimized homepage sections using your validated positioning, buyer language, and proof package.
+            </p>
+            <button
+              className="btn-secondary text-[13px]"
+              disabled={!checklist.one_sentence_positioning || vaultItems.length < 3}
+              title={!checklist.one_sentence_positioning ? 'Complete positioning first' : vaultItems.length < 3 ? 'Add at least 3 proof items' : ''}
+            >
+              <Sparkles size={14} /> Generate homepage copy
+            </button>
+          </div>
+
+          {/* Social Bios */}
+          <div className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="font-display font-semibold text-[16px] text-phantom-text-primary mb-1">Social Bios</p>
+                <p className="font-body text-[12px] text-phantom-text-muted">Twitter, LinkedIn, Instagram</p>
+              </div>
+              <span className="badge">PRO</span>
+            </div>
+            <p className="font-body text-[13px] text-phantom-text-secondary mb-3">
+              Platform-specific bios optimized for character limits. Built from your one-sentence positioning and voice adjectives.
+            </p>
+            <button
+              className="btn-secondary text-[13px]"
+              disabled={!checklist.one_sentence_positioning}
+              title={!checklist.one_sentence_positioning ? 'Complete positioning first' : ''}
+            >
+              <Sparkles size={14} /> Generate social bios
+            </button>
+          </div>
+
+          {/* Pitch Deck Outline */}
+          <div className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="font-display font-semibold text-[16px] text-phantom-text-primary mb-1">Pitch Deck Outline</p>
+                <p className="font-body text-[12px] text-phantom-text-muted">10-slide structure with talking points</p>
+              </div>
+              <span className="badge">PRO</span>
+            </div>
+            <p className="font-body text-[13px] text-phantom-text-secondary mb-3">
+              Investor-ready deck outline: problem, solution, traction, market, team. Pre-populated with your validated data.
+            </p>
+            <button
+              className="btn-secondary text-[13px]"
+              disabled={!checklist.one_sentence_positioning || conversionsCount < 5}
+              title={!checklist.one_sentence_positioning ? 'Complete positioning first' : conversionsCount < 5 ? 'Need at least 5 conversions for traction' : ''}
+            >
+              <Sparkles size={14} /> Generate pitch deck
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 bg-phantom-black/40 border border-phantom-border-subtle rounded p-3">
+          <p className="font-body text-[12px] text-phantom-text-secondary">
+            These generators pull from your locked positioning, buyer language, proof vault, and iteration history. Complete the sections above to unlock them.
+          </p>
+        </div>
+      </div>
+
+      {/* Section 8 — Lock-in checklist */}
       <div className={`card mb-6 transition-colors duration-300 ${allChecked ? 'border-phantom-lime' : 'border-phantom-border'}`}>
         <p className="label text-phantom-lime mb-4">The lock-in checklist</p>
 

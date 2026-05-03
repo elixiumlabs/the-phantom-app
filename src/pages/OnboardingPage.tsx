@@ -68,10 +68,9 @@ const OnboardingPage = memo(() => {
       setPendingDestination(`/project/${project_id}/identify`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Could not finish onboarding.'
-      // Idempotent recovery: a prior run may have completed server-side even
-      // though the client never received the project_id. Send them to the
-      // dashboard once the listener confirms the flag flipped.
-      if (/onboarding already completed/i.test(msg)) {
+      // Idempotent recovery: if onboarding was already completed (e.g. from a
+      // previous attempt), just send them to dashboard without showing an error
+      if (/onboarding already completed/i.test(msg) || /already has a project/i.test(msg)) {
         setPendingDestination('/dashboard')
         return
       }

@@ -329,7 +329,44 @@ const PhaseIterate = memo(() => {
         />
       </div>
 
-      {/* Section 4 — Iteration log */}
+      {/* Section 4 — Proof Vault */}
+      <div className="card mb-6">
+        <p className="label mb-4">Proof Vault</p>
+        <p className="font-body text-[14px] text-phantom-text-secondary mb-5">
+          Collect testimonials, screenshots, case studies, and results from every transaction. By the time you launch, you have 10-30 pieces of standalone proof.
+        </p>
+
+        <div className="grid grid-cols-3 gap-4 mb-5">
+          {[
+            { label: 'Results', count: silentTest?.summary?.conversions || 0 },
+            { label: 'Testimonials', count: 0 },
+            { label: 'Case Studies', count: 0 },
+          ].map(({ label, count }) => (
+            <div key={label} className="bg-[#0d0d0d] border border-phantom-border-subtle rounded p-3">
+              <p className="font-code font-bold text-[22px] text-phantom-lime leading-none">{count}</p>
+              <p className="font-body text-[11px] text-phantom-text-muted mt-1">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-phantom-lime/5 border border-phantom-lime/30 rounded p-4 mb-4">
+          <p className="font-body text-[13px] text-phantom-text-primary mb-3">
+            The Proof Vault is your private library of evidence. Every conversion, testimonial, and result you collect during the phantom phase gets stored here.
+          </p>
+          <p className="font-body text-[12px] text-phantom-text-secondary">
+            When you lock in and go public, you will have 10-30 pieces of standalone proof ready to deploy.
+          </p>
+        </div>
+
+        <a
+          href="/vault"
+          className="btn-secondary inline-flex items-center gap-2"
+        >
+          <ExternalLink size={14} /> Open Proof Vault
+        </a>
+      </div>
+
+      {/* Section 5 — Iteration log */}
       <div className="card mb-6">
         <div className="flex items-center justify-between mb-2">
           <p className="label">Iteration log</p>
@@ -453,7 +490,7 @@ const PhaseIterate = memo(() => {
         )}
       </div>
 
-      {/* Section 5 — Private documentation */}
+      {/* Section 6 — Private documentation */}
       <div className="card mb-6">
         <p className="label mb-2">Private documentation</p>
         <p className="font-body text-[14px] text-phantom-text-secondary mb-4">

@@ -96,7 +96,7 @@ const PHASE_FEATURES = [
     title: 'Lock',
     subtitle: 'Freeze the offer and go public',
     icon: Lock,
-    image: '/placeholder-lock.jpg',
+    image: 'https://storage.googleapis.com/phantom-app/4K_ultra-wide_cinematic_editorial_photograph_202605030232.jpeg',
     description: 'Lock in the offer, price, and positioning. Build public assets only after everything is validated. The launch is not the start — it\'s the announcement of a brand that already works.',
     features: [
       {

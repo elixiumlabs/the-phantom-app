@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects, type Project } from '@/contexts/ProjectContext'
 import AppSidebar from '@/components/app/AppSidebar'
-import { completeOnboarding, deleteProject } from '@/lib/functions'
+import { completeOnboarding, deleteProject, createProject } from '@/lib/functions'
 import { useProtection } from '@/hooks'
 
 const PHASE_LABELS: Record<number, string> = {
@@ -109,24 +109,31 @@ const OnboardingModal = memo(({ onClose }: { onClose: () => void }) => {
 
   const [form, setForm] = useState({
     what_building: '',
-    user_type: 'solo_founder' as const,
-    built_in_public: 'no' as const,
-    history_note: '',
+    project_name: '',
   })
 
   const handleSubmit = async () => {
     if (!form.what_building.trim()) {
-      setError('Please describe what you\'re building')
+      setError('Please describe what you are building')
       return
     }
     setLoading(true)
     setError('')
     try {
-      const result = await completeOnboarding(form)
+      const result = await createProject({
+        name: form.project_name.trim() || form.what_building.slice(0, 60),
+        initial_problem: form.what_building.trim(),
+      })
       navigate(`/project/${result.project_id}/identify`)
       onClose()
     } catch (err) {
-      setError((err as Error).message)
+      const msg = (err as Error).message
+      // Handle free plan limit gracefully
+      if (/limit/i.test(msg) || /upgrade/i.test(msg)) {
+        setError('Free plan allows 1 active project. Archive or delete your existing project to create a new one, or upgrade to PRO.')
+      } else {
+        setError(msg)
+      }
       setLoading(false)
     }
   }
@@ -147,21 +154,22 @@ const OnboardingModal = memo(({ onClose }: { onClose: () => void }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-6">
-          <p className="label text-phantom-lime mb-2">New Project — Step {step}/3</p>
+          <p className="label text-phantom-lime mb-2">New Project</p>
           <h2 className="font-display font-bold text-[24px] text-phantom-text-primary">
-            {step === 1 && 'What are you building?'}
-            {step === 2 && 'Who are you?'}
-            {step === 3 && 'Have you built in public before?'}
+            {step === 1 ? 'What are you building?' : 'Name your project'}
           </h2>
         </div>
 
         {step === 1 && (
           <div className="space-y-4">
+            <p className="font-body text-[14px] text-phantom-text-secondary">
+              Describe what you are building in 1-2 sentences. This will be refined in Phase 01.
+            </p>
             <textarea
               className="input min-h-[120px]"
               value={form.what_building}
               onChange={(e) => setForm({ ...form, what_building: e.target.value })}
-              placeholder="Describe what you're building in 1-2 sentences..."
+              placeholder="e.g. A short course that helps neurodivergent freelancers price their work without negotiating against themselves."
               autoFocus
             />
             <button
@@ -176,70 +184,22 @@ const OnboardingModal = memo(({ onClose }: { onClose: () => void }) => {
 
         {step === 2 && (
           <div className="space-y-4">
-            <div className="space-y-2">
-              {[
-                { value: 'solo_founder', label: 'Solo founder' },
-                { value: 'creator', label: 'Creator / influencer' },
-                { value: 'coach_consultant', label: 'Coach / consultant' },
-                { value: 'agency', label: 'Agency' },
-                { value: 'other', label: 'Other' },
-              ].map(({ value, label }) => (
-                <label key={value} className="flex items-center gap-3 p-3 rounded border border-phantom-border hover:border-phantom-lime/40 cursor-pointer transition-colors">
-                  <input
-                    type="radio"
-                    name="user_type"
-                    value={value}
-                    checked={form.user_type === value}
-                    onChange={(e) => setForm({ ...form, user_type: e.target.value as typeof form.user_type })}
-                    className="w-4 h-4"
-                  />
-                  <span className="font-body text-[14px] text-phantom-text-primary">{label}</span>
-                </label>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <button className="btn-ghost flex-1" onClick={() => setStep(1)}>
-                Back
-              </button>
-              <button className="btn-primary flex-1" onClick={() => setStep(3)}>
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              {[
-                { value: 'yes', label: 'Yes, I\'ve launched publicly before' },
-                { value: 'currently', label: 'I\'m currently building in public' },
-                { value: 'no', label: 'No, this is my first time' },
-              ].map(({ value, label }) => (
-                <label key={value} className="flex items-center gap-3 p-3 rounded border border-phantom-border hover:border-phantom-lime/40 cursor-pointer transition-colors">
-                  <input
-                    type="radio"
-                    name="built_in_public"
-                    value={value}
-                    checked={form.built_in_public === value}
-                    onChange={(e) => setForm({ ...form, built_in_public: e.target.value as typeof form.built_in_public })}
-                    className="w-4 h-4"
-                  />
-                  <span className="font-body text-[14px] text-phantom-text-primary">{label}</span>
-                </label>
-              ))}
-            </div>
-            <textarea
-              className="input min-h-[80px]"
-              value={form.history_note}
-              onChange={(e) => setForm({ ...form, history_note: e.target.value })}
-              placeholder="Optional: Any context about your previous launches?"
+            <p className="font-body text-[14px] text-phantom-text-secondary">
+              Give your project a working name. You can change this later.
+            </p>
+            <input
+              className="input"
+              value={form.project_name}
+              onChange={(e) => setForm({ ...form, project_name: e.target.value })}
+              placeholder="Leave blank to auto-generate from description"
             />
             {error && (
-              <p className="font-body text-[13px] text-phantom-danger">{error}</p>
+              <div className="bg-phantom-danger/10 border border-phantom-danger/30 rounded p-3">
+                <p className="font-body text-[13px] text-phantom-danger">{error}</p>
+              </div>
             )}
             <div className="flex gap-2">
-              <button className="btn-ghost flex-1" onClick={() => setStep(2)} disabled={loading}>
+              <button className="btn-ghost flex-1" onClick={() => setStep(1)} disabled={loading}>
                 Back
               </button>
               <button className="btn-primary flex-1" onClick={handleSubmit} disabled={loading}>
