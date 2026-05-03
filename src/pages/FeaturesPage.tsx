@@ -124,13 +124,13 @@ const CORE_TOOLS = [
     icon: Database,
     name: 'Proof Vault',
     description: 'Private library of testimonials, case studies, and results collected during the phantom phase. Every transaction generates an artifact. Export and deploy when you launch.',
-    image: '/placeholder-proof-vault.jpg',
+    image: 'https://storage.googleapis.com/phantom-app/proofvault.png',
   },
   {
     icon: MessageSquare,
     name: 'Signal Tracker',
     description: 'Log every conversation, objection, and conversion. Track what real buyers say, not what followers like. Identify patterns, surface objections, refine messaging.',
-    image: '/placeholder-signal-tracker.jpg',
+    image: 'https://storage.googleapis.com/phantom-app/signaltracker.png',
   },
   {
     icon: FileText,
@@ -212,19 +212,18 @@ const FeaturesPage = memo(() => {
             </Link>
           </motion.div>
 
-          {/* Hero Image Placeholder */}
-          <motion.div
+{/* Hero Image Placeholder */}
+<motion.div
             className="relative rounded-2xl overflow-hidden border border-phantom-border-subtle"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
           >
-            <div className="aspect-[16/9] bg-phantom-surface flex items-center justify-center">
-              <div className="text-center">
-                <BarChart3 className="text-phantom-lime mx-auto mb-4" size={48} />
-                <p className="font-ui text-[14px] text-phantom-text-muted">Phantom Dashboard Preview</p>
-              </div>
-            </div>
+            <img
+              src="https://storage.googleapis.com/phantom-app/whatareyoubuilding.png"
+              alt="Phantom Dashboard Preview"
+              className="w-full h-full object-cover"
+            />
           </motion.div>
         </div>
 
@@ -273,7 +272,7 @@ const FeaturesPage = memo(() => {
                 {/* Image Placeholder */}
                 <div className={phaseIndex % 2 === 0 ? 'md:order-2' : 'md:order-1'}>
                   <div className="relative rounded-2xl overflow-hidden border border-phantom-border-subtle">
-                    <div className="aspect-[4/3] bg-phantom-surface flex items-center justify-center">
+                    <div className="aspect-video bg-phantom-surface flex items-center justify-center">
                       {image.startsWith('http') ? (
                         <img src={image} alt={`${title} Phase Preview`} className="w-full h-full object-cover" />
                       ) : (
@@ -332,7 +331,7 @@ const FeaturesPage = memo(() => {
           </motion.div>
 
           <div className="space-y-16">
-            {CORE_TOOLS.map(({ icon: Icon, name, description }, i) => (
+{CORE_TOOLS.map(({ icon: Icon, name, description, image }, i) => (
               <motion.div
                 key={name}
                 className="grid md:grid-cols-2 gap-12 items-center"
@@ -353,14 +352,18 @@ const FeaturesPage = memo(() => {
                   </p>
                 </div>
 
-                {/* Image Placeholder */}
+{/* Image Placeholder */}
                 <div className={i % 2 === 0 ? '' : 'md:order-1'}>
                   <div className="relative rounded-2xl overflow-hidden border border-phantom-border-subtle">
-                    <div className="aspect-[4/3] bg-phantom-surface flex items-center justify-center">
-                      <div className="text-center">
-                        <Icon className="text-phantom-lime mx-auto mb-3" size={40} />
-                        <p className="font-ui text-[13px] text-phantom-text-muted">{name}</p>
-                      </div>
+                    <div className="aspect-video bg-phantom-surface flex items-center justify-center">
+                      {image.startsWith('http') ? (
+                        <img src={image} alt={`${name} Preview`} className="w-full h-full object-contain bg-phantom-surface" />
+                      ) : (
+                        <div className="text-center">
+                          <Icon className="text-phantom-lime mx-auto mb-3" size={40} />
+                          <p className="font-ui text-[13px] text-phantom-text-muted">{name}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
