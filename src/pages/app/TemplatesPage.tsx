@@ -142,6 +142,74 @@ I am working with [small number] people right now at a reduced rate in exchange 
       'Do not ask a question in the connection note — save that for after they accept.',
     ],
   },
+  {
+    id: 'linkedin-followup',
+    category: 'LinkedIn',
+    name: 'LinkedIn DM — Post-Connection Research',
+    platform: 'LinkedIn DM',
+    when: 'They accepted your connection request. Use this as the first message after acceptance.',
+    body: `Thanks for connecting, [Name]. Quick research question — when it comes to [specific problem], what part tends to break first for your team?
+
+I am mapping patterns before building anything, so I am not pitching. Even a short answer is useful.`,
+    tips: [
+      'Send this within 24 hours of acceptance while context is fresh.',
+      'Ask one concrete question tied to execution, not theory.',
+      'Keep the no-pitch line to reduce resistance and improve reply rate.',
+    ],
+  },
+  {
+    id: 'warm-intro-ask',
+    category: 'Warm Intros',
+    name: 'Warm Intro Request — Mutual Contact',
+    platform: 'Email / DM',
+    when: 'You know someone who can introduce you to a target buyer. Use this before direct outreach.',
+    body: `Hey [Mutual Contact], could I ask for a quick intro to [Target Name]?
+
+I am researching [specific problem] with [audience type] and want to ask one short question about how they currently handle it. No pitch, no sales call — just validation research.
+
+If you are open to it, happy to send a 2-line blurb you can forward.`,
+    tips: [
+      'Make the ask low-friction and specific.',
+      'State exactly what you will not do (no sales call).',
+      'Offer a forwardable blurb so they do less work.',
+    ],
+  },
+  {
+    id: 'customer-referral-ask',
+    category: 'Warm Intros',
+    name: 'Customer Referral Ask — Similar Operators',
+    platform: 'Email / DM',
+    when: 'You already have one user/customer and want referrals to similar people for more signal.',
+    body: `You mentioned [specific pain point] was a major issue before [result they got].
+
+Do you know 1–2 people in a similar role who are still dealing with this? I am doing more problem research and would love to ask them one short question. I can draft a message you can forward if that helps.`,
+    tips: [
+      'Anchor the ask to a result they already experienced.',
+      'Request 1–2 intros, not a broad favor.',
+      'Referral outreach usually converts higher because trust is transferred.',
+    ],
+  },
+  {
+    id: 'breakup-followup',
+    category: 'Email',
+    name: 'Cold Email — Breakup Follow-Up',
+    platform: 'Email',
+    when: 'After your first email and one follow-up got no response. Final touch, then close the loop.',
+    body: `Subject: Should I close this out?
+
+Hi [Name],
+
+I have reached out twice about [problem area] research and did not hear back, so I will assume timing is not right.
+
+If this is still relevant, reply with "later" and I will check back in a month. Otherwise I will close this out.
+
+[Your name]`,
+    tips: [
+      'Use only after two unanswered touches.',
+      'Give an easy one-word reply option to reduce effort.',
+      'If they do not respond, actually close the thread and move on.',
+    ],
+  },
 ]
 
 const CATEGORIES = Array.from(new Set(TEMPLATES.map(t => t.category)))
