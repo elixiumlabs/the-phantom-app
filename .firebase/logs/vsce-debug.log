@@ -129,3 +129,5 @@
 [info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
 [debug] [2026-05-03T18:39:16.241Z] Checked if tokens are valid: true, expires at: 1777836157263
 [debug] [2026-05-03T18:39:16.242Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-05-03T18:39:17.834Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-05-03T18:39:17.835Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
