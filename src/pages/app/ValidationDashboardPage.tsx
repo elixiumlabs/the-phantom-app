@@ -26,6 +26,18 @@ function dayKey(d: Date) {
   return d.toISOString().slice(0, 10)
 }
 
+function weekStartKey(d: Date) {
+  const dt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+  const day = dt.getUTCDay()
+  const diffToMonday = day === 0 ? -6 : 1 - day
+  dt.setUTCDate(dt.getUTCDate() + diffToMonday)
+  return dt.toISOString().slice(0, 10)
+}
+
+function monthKey(d: Date) {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
 const ValidationDashboardPage = memo(() => {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -36,6 +48,7 @@ const ValidationDashboardPage = memo(() => {
   const [objectionsPage, setObjectionsPage] = useState(1)
   const [conversionsPage, setConversionsPage] = useState(1)
   const [isTrendCollapsed, setIsTrendCollapsed] = useState(false)
+  const [trendGranularity, setTrendGranularity] = useState<'daily' | 'weekly' | 'monthly'>('daily')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const ITEMS_PER_PAGE = 5
@@ -194,46 +207,59 @@ const ValidationDashboardPage = memo(() => {
     return Object.entries(map).filter(([, c]) => c > 0).sort(([, a], [, b]) => b - a)
   }, [proofVault])
 
-  const dailySeries = useMemo(() => {
-    const days = 14
-    const start = new Date(now.getTime() - (days - 1) * dayMs)
+  const trendGrid = useMemo(() => {
     const map: Record<string, { outreach: number; replies: number; conversions: number }> = {}
+    const keys: string[] = []
 
-    for (let i = 0; i < days; i += 1) {
-      const dt = new Date(start.getTime() + i * dayMs)
-      map[dayKey(dt)] = { outreach: 0, replies: 0, conversions: 0 }
+    if (trendGranularity === 'daily') {
+      const days = 14
+      const start = new Date(now.getTime() - (days - 1) * dayMs)
+      for (let i = 0; i < days; i += 1) {
+        const dt = new Date(start.getTime() + i * dayMs)
+        const key = dayKey(dt)
+        keys.push(key)
+        map[key] = { outreach: 0, replies: 0, conversions: 0 }
+      }
+    } else if (trendGranularity === 'weekly') {
+      for (let i = 11; i >= 0; i -= 1) {
+        const dt = new Date(now)
+        dt.setDate(now.getDate() - i * 7)
+        const key = weekStartKey(dt)
+        keys.push(key)
+        map[key] = { outreach: 0, replies: 0, conversions: 0 }
+      }
+    } else {
+      for (let i = 11; i >= 0; i -= 1) {
+        const dt = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const key = monthKey(dt)
+        keys.push(key)
+        map[key] = { outreach: 0, replies: 0, conversions: 0 }
+      }
     }
 
     scopedRows.forEach((r) => {
       const dt = toDate(r.created_at)
       if (!dt) return
-      const key = dayKey(dt)
+      const key = trendGranularity === 'daily' ? dayKey(dt) : trendGranularity === 'weekly' ? weekStartKey(dt) : monthKey(dt)
       if (!map[key]) return
       map[key].outreach += 1
       if (r.responded && !r.converted) map[key].replies += 1
       if (r.converted) map[key].conversions += 1
     })
 
-    return Object.entries(map).map(([date, v]) => ({
-      date,
-      outreach: v.outreach,
-      replies: v.replies,
-      conversions: v.conversions,
-      convRate: v.outreach > 0 ? (v.conversions / v.outreach) * 100 : 0,
-    }))
-  }, [scopedRows, now, dayMs])
-
-  const dailyGrid = useMemo(() => {
-    return dailySeries.map((d, idx, arr) => {
-      const start = Math.max(0, idx - 6)
-      const window = arr.slice(start, idx + 1)
-      const movingAvg = window.length > 0 ? window.reduce((sum, x) => sum + x.convRate, 0) / window.length : 0
+    const series = keys.map((date) => {
+      const v = map[date]
       return {
-        ...d,
-        movingAvg,
+        date,
+        outreach: v.outreach,
+        replies: v.replies,
+        conversions: v.conversions,
+        convRate: v.outreach > 0 ? (v.conversions / v.outreach) * 100 : 0,
       }
     })
-  }, [dailySeries])
+
+    return series
+  }, [scopedRows, now, dayMs, trendGranularity])
 
   const topConvertingDetails = useMemo(() => {
     const converted = scopedRows.filter((r) => r.converted)
@@ -336,7 +362,7 @@ const ValidationDashboardPage = memo(() => {
               aria-expanded={!isTrendCollapsed}
               aria-controls="conversion-trend-table"
             >
-              <span>14-day conversion trend</span>
+              <span>Conversion trends</span>
               <ChevronDown
                 size={14}
                 className={`transition-transform ${isTrendCollapsed ? '' : 'rotate-180'}`}
@@ -344,29 +370,46 @@ const ValidationDashboardPage = memo(() => {
               />
             </button>
             {!isTrendCollapsed && (
-            <div id="conversion-trend-table" className="overflow-x-auto">
-              <table className="w-full min-w-[760px]">
-                <thead>
-                  <tr className="border-b border-phantom-border-subtle">
-                    {['Date', 'Outreach', 'Replies', 'Conversions', 'Conversion %', '7d avg'].map((h) => (
-                      <th key={h} className="text-left py-2 pr-4 font-ui text-[11px] uppercase tracking-wider text-phantom-text-muted">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {dailyGrid.map((d) => (
-                    <tr key={d.date} className="border-b border-phantom-border-subtle/40">
-                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.date}</td>
-                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.outreach}</td>
-                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.replies}</td>
-                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.conversions}</td>
-                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-lime">{d.convRate.toFixed(1)}%</td>
-                      <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.movingAvg.toFixed(1)}%</td>
-                    </tr>
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  {([
+                    { key: 'daily', label: 'Daily' },
+                    { key: 'weekly', label: 'Weekly' },
+                    { key: 'monthly', label: 'Monthly' },
+                  ] as const).map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      className={`px-3 py-1 rounded-md text-[12px] border ${trendGranularity === option.key ? 'border-phantom-lime text-phantom-lime bg-phantom-lime/10' : 'border-phantom-border-subtle text-phantom-text-secondary'}`}
+                      onClick={() => setTrendGranularity(option.key)}
+                    >
+                      {option.label}
+                    </button>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </div>
+                <div id="conversion-trend-table" className="overflow-x-auto">
+                  <table className="w-full min-w-[760px]">
+                    <thead>
+                      <tr className="border-b border-phantom-border-subtle">
+                        {['Date', 'Outreach', 'Replies', 'Conversions', 'Conversion %'].map((h) => (
+                          <th key={h} className="text-left py-2 pr-4 font-ui text-[11px] uppercase tracking-wider text-phantom-text-muted">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {trendGrid.map((d) => (
+                        <tr key={d.date} className="border-b border-phantom-border-subtle/40">
+                          <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.date}</td>
+                          <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.outreach}</td>
+                          <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.replies}</td>
+                          <td className="py-2 pr-4 font-code text-[12px] text-phantom-text-secondary">{d.conversions}</td>
+                          <td className="py-2 pr-4 font-code text-[12px] text-phantom-lime">{d.convRate.toFixed(1)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
 
