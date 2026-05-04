@@ -142,7 +142,7 @@ const CORE_TOOLS = [
     icon: BarChart3,
     name: 'Validation Dashboard',
     description: 'Real-time metrics on cold conversion rate, repeat rate, and proof collection progress. See exactly where you are in the validation process.',
-    image: '/placeholder-dashboard.jpg',
+    image: 'https://storage.googleapis.com/phantom-app/validation%20dashboard.png',
   },
   {
     icon: Sparkles,
