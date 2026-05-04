@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Activity, AlertTriangle, BarChart3, ChevronLeft, ChevronRight, Database, Loader, MessageSquareWarning, TrendingUp } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, ChevronDown, ChevronLeft, ChevronRight, Database, Loader, MessageSquareWarning, TrendingUp } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { collectionGroup, onSnapshot, orderBy, query, where, type Unsubscribe } from 'firebase/firestore'
 import { useAuth } from '@/contexts/AuthContext'
@@ -35,6 +35,7 @@ const ValidationDashboardPage = memo(() => {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('')
   const [objectionsPage, setObjectionsPage] = useState(1)
   const [conversionsPage, setConversionsPage] = useState(1)
+  const [isTrendCollapsed, setIsTrendCollapsed] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const ITEMS_PER_PAGE = 5
@@ -328,8 +329,22 @@ const ValidationDashboardPage = memo(() => {
           </div>
 
 <div className="card mb-8 flex flex-col">
-            <p className="label mb-3">14-day conversion trend</p>
-            <div className="overflow-x-auto">
+            <button
+              type="button"
+              className="label mb-3 flex items-center justify-between text-left"
+              onClick={() => setIsTrendCollapsed((v) => !v)}
+              aria-expanded={!isTrendCollapsed}
+              aria-controls="conversion-trend-table"
+            >
+              <span>14-day conversion trend</span>
+              <ChevronDown
+                size={14}
+                className={`transition-transform ${isTrendCollapsed ? '' : 'rotate-180'}`}
+                aria-hidden="true"
+              />
+            </button>
+            {!isTrendCollapsed && (
+            <div id="conversion-trend-table" className="overflow-x-auto">
               <table className="w-full min-w-[760px]">
                 <thead>
                   <tr className="border-b border-phantom-border-subtle">
@@ -352,6 +367,7 @@ const ValidationDashboardPage = memo(() => {
                 </tbody>
               </table>
             </div>
+            )}
           </div>
 
           <div className="grid lg:grid-cols-2 gap-6 mb-8">

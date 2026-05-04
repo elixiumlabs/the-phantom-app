@@ -148,7 +148,7 @@ const CORE_TOOLS = [
     icon: Sparkles,
     name: 'AI Brand Assistant',
     description: 'Get instant feedback on positioning, offer clarity, and messaging. Trained on the phantom phase framework to catch weak spots before the market does.',
-    image: '/placeholder-ai-assistant.jpg',
+    image: 'https://storage.googleapis.com/phantom-app/aiassistant.png',
   },
 ]
 
