@@ -149,3 +149,34 @@
 [debug] [2026-05-03T21:33:07.676Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
 [debug] [2026-05-03T21:33:08.504Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
 [debug] [2026-05-03T21:33:08.505Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2026-05-05T19:09:13.552Z] [Firebase Plugin] Activating Firebase extension.
+[info] [Firebase Plugin] Checked firebase-tools, is up to date!
+[debug] [2026-05-05T19:09:25.067Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2026-05-05T19:09:25.074Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-05T19:09:25.075Z] > authorizing via signed-in user (empressempiresllc@gmail.com)
+[debug] [2026-05-05T19:09:25.080Z] Checked if tokens are valid: true, expires at: 1778011686687
+[debug] [2026-05-05T19:09:25.080Z] Checked if tokens are valid: true, expires at: 1778011686687
+[debug] [2026-05-05T19:09:25.081Z] [Firebase Plugin] User found:  empressempiresllc@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2026-05-05T19:09:25.084Z] Checked if tokens are valid: true, expires at: 1778011686687
+[debug] [2026-05-05T19:09:25.085Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-05-05T19:09:26.026Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-05-05T19:09:26.027Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2026-05-05T23:41:23.550Z] [Firebase Plugin] Activating Firebase extension.
+[info] [Firebase Plugin] Checked firebase-tools, is up to date!
+[debug] [2026-05-05T23:41:42.289Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2026-05-05T23:41:42.306Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-05T23:41:42.307Z] > authorizing via signed-in user (empressempiresllc@gmail.com)
+[debug] [2026-05-05T23:41:42.312Z] Checked if tokens are valid: false, expires at: 1778011686687
+[debug] [2026-05-05T23:41:42.312Z] Checked if tokens are valid: false, expires at: 1778011686687
+[debug] [2026-05-05T23:41:42.313Z] > refreshing access token with scopes: []
+[debug] [2026-05-05T23:41:42.316Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-05-05T23:41:42.316Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-05-05T23:41:47.327Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-05-05T23:41:47.328Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-05-05T23:41:47.349Z] [Firebase Plugin] User found:  empressempiresllc@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2026-05-05T23:41:47.351Z] Checked if tokens are valid: true, expires at: 1778028106328
+[debug] [2026-05-05T23:41:47.351Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-05-05T23:41:47.843Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-05-05T23:41:47.844Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]

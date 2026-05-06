@@ -29,7 +29,9 @@
       "Bash(git rm *)",
       "Bash(firebase functions:secrets:set GROQ_API_KEY --data-file=-)",
       "Bash(firebase functions:log --only refineProblemStatement -n 20)",
-      "Bash(firebase functions:log --only refineProblemStatement -n 80)"
+      "Bash(firebase functions:log --only refineProblemStatement -n 80)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\empre\\\\the-phantom-app\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)"
     ]
   }
 }
