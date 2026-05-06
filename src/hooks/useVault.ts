@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react'
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-  type DocumentData,
-} from 'firebase/firestore'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { db, isFirebaseConfigured } from '@/lib/firebase'
 import type { ProofVaultItem } from '@/contexts/ProjectContext'
 
 interface VaultResult {
@@ -17,10 +9,6 @@ interface VaultResult {
   error: Error | null
 }
 
-/**
- * Live proof vault items. If projectId is given, scope to that project.
- * Otherwise return everything the user owns.
- */
 export function useVault(projectId?: string | null): VaultResult {
   const { user, loading: authLoading } = useAuth()
   const [items, setItems] = useState<ProofVaultItem[]>([])
@@ -28,56 +16,72 @@ export function useVault(projectId?: string | null): VaultResult {
   const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
-    if (!isFirebaseConfigured || authLoading) return
+    if (!isSupabaseConfigured || authLoading) return
     if (!user) {
       setItems([])
       setLoading(false)
       return
     }
 
-    const base = collection(db, 'proof_vault')
-    const q = projectId
-      ? query(base, where('user_id', '==', user.id), where('project_id', '==', projectId), orderBy('created_at', 'desc'))
-      : query(base, where('user_id', '==', user.id), orderBy('created_at', 'desc'))
+    const channelKey = projectId ? `vault-project-${projectId}` : `vault-user-${user.id}`
 
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setItems(
-          snap.docs.map((d) => {
-            const data = d.data() as DocumentData
-            return {
-              id: d.id,
-              user_id: data.user_id,
-              project_id: data.project_id ?? null,
-              proof_type: data.proof_type,
-              title: data.title ?? '',
-              content: data.content ?? '',
-              file_url: data.file_url,
-              storage_path: data.storage_path,
-              amount: data.amount,
-              source: data.source,
-              date: data.date,
-              tags: data.tags ?? [],
-              content_type: data.content_type ?? null,
-              size: data.size ?? null,
-              created_at: data.created_at ?? null,
-            } as ProofVaultItem
-          }),
-        )
-        setLoading(false)
-        setError(null)
-      },
-      (err) => {
-        // eslint-disable-next-line no-console
-        console.error('[phantom] useVault listener error:', err)
-        setError(err)
-        setLoading(false)
-      },
-    )
+    // Initial fetch
+    const query = supabase
+      .from('proof_vault')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
 
-    return unsub
-  }, [user, authLoading, projectId])
+    if (projectId) query.eq('project_id', projectId)
+
+    query.then(({ data, error: err }) => {
+      if (err) {
+        setError(new Error(err.message))
+      } else {
+        setItems((data ?? []) as ProofVaultItem[])
+      }
+      setLoading(false)
+    })
+
+    // Realtime: watch inserts, updates, deletes for this user's vault
+    const filter = projectId
+      ? `user_id=eq.${user.id},project_id=eq.${projectId}`
+      : `user_id=eq.${user.id}`
+
+    const channel = supabase
+      .channel(channelKey)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'proof_vault', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const item = payload.new as ProofVaultItem
+          if (projectId && item.project_id !== projectId) return
+          setItems((prev) => [item, ...prev])
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'proof_vault', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const updated = payload.new as ProofVaultItem
+          setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'proof_vault', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          setItems((prev) => prev.filter((i) => i.id !== (payload.old as { id: string }).id))
+        },
+      )
+      .subscribe()
+
+    void filter // used conceptually above; suppress unused warning
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user?.id, authLoading, projectId])
 
   return { items, loading, error }
 }

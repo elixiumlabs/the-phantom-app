@@ -1,19 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  onAuthStateChanged,
-  sendEmailVerification,
-  updateProfile,
-  signOut,
-  type User as FirebaseUser,
-} from 'firebase/auth'
-import { doc, onSnapshot, type Unsubscribe } from 'firebase/firestore'
-import { auth, db, googleProvider, isFirebaseConfigured } from '@/lib/firebase'
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 
 const NOT_CONFIGURED = new Error(
-  'Auth is not configured. Add Firebase env vars (VITE_FIREBASE_*) to .env.local and restart the dev server.',
+  'Auth is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local and restart.',
 )
 
 export type Plan = 'free' | 'phantom' | 'phantom_pro'
@@ -34,7 +24,7 @@ export interface User {
 
 interface AuthCtx {
   user: User | null
-  firebaseUser: FirebaseUser | null
+  session: Session | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<void>
@@ -44,32 +34,19 @@ interface AuthCtx {
 
 const AuthContext = createContext<AuthCtx | null>(null)
 
-function authErrorMessage(code: string): string {
-  switch (code) {
-    case 'auth/email-already-in-use': return 'An account with this email already exists.'
-    case 'auth/invalid-email': return 'That email address is not valid.'
-    case 'auth/weak-password': return 'Password must be at least 6 characters.'
-    case 'auth/user-not-found':
-    case 'auth/wrong-password':
-    case 'auth/invalid-credential': return 'Email or password is incorrect.'
-    case 'auth/too-many-requests': return 'Too many attempts. Try again in a few minutes.'
-
-    // Google / popup specific
-    case 'auth/popup-closed-by-user':
-    case 'auth/cancelled-popup-request': return 'Sign-in cancelled.'
-    case 'auth/popup-blocked': return 'Your browser blocked the Google popup. Allow popups for this site and try again.'
-    case 'auth/unauthorized-domain': return 'This domain is not authorized for Google sign-in. Add it in Firebase Console → Authentication → Settings → Authorized domains.'
-    case 'auth/operation-not-allowed': return 'Google sign-in is not enabled. Turn it on in Firebase Console → Authentication → Sign-in method → Google.'
-    case 'auth/account-exists-with-different-credential': return 'An account with this email already exists using a different sign-in method.'
-    case 'auth/internal-error': return 'Firebase internal error. Check the browser console for details.'
-
-    case 'auth/network-request-failed': return 'Network error. Check your connection.'
-    case 'auth/configuration-not-found': return 'Firebase Auth is not configured for this project. Enable Authentication in Firebase Console.'
-    default: return code ? `Sign-in failed (${code}). Check the browser console.` : 'Something went wrong. Try again.'
-  }
+function authErrorMessage(message: string): string {
+  const m = message.toLowerCase()
+  if (m.includes('email already') || m.includes('already registered')) return 'An account with this email already exists.'
+  if (m.includes('invalid email')) return 'That email address is not valid.'
+  if (m.includes('password') && m.includes('short')) return 'Password must be at least 6 characters.'
+  if (m.includes('invalid login') || m.includes('invalid credentials') || m.includes('email not confirmed')) return 'Email or password is incorrect.'
+  if (m.includes('too many requests') || m.includes('rate limit')) return 'Too many attempts. Try again in a few minutes.'
+  if (m.includes('popup') || m.includes('cancelled')) return 'Sign-in cancelled.'
+  if (m.includes('network')) return 'Network error. Check your connection.'
+  return message || 'Something went wrong. Try again.'
 }
 
-function shapeUser(fbUser: FirebaseUser, profile: Record<string, unknown> | null): User {
+function shapeUser(supaUser: SupabaseUser, profile: Record<string, unknown> | null): User {
   const rawProvider = profile?.llm_provider as string | undefined
   const llmProvider: LLMProvider =
     rawProvider === 'gemini' ||
@@ -79,12 +56,20 @@ function shapeUser(fbUser: FirebaseUser, profile: Record<string, unknown> | null
     rawProvider === 'groq_compound'
       ? rawProvider
       : 'gemini'
+
+  const meta = supaUser.user_metadata as Record<string, unknown> | undefined
+
   return {
-    id: fbUser.uid,
-    name: (profile?.full_name as string | undefined) ?? fbUser.displayName ?? fbUser.email?.split('@')[0] ?? 'phantom',
-    email: fbUser.email ?? '',
-    emailVerified: fbUser.emailVerified,
-    plan: ((profile?.plan as Plan | undefined) ?? 'free'),
+    id: supaUser.id,
+    name:
+      (profile?.full_name as string | undefined) ??
+      (meta?.full_name as string | undefined) ??
+      (meta?.name as string | undefined) ??
+      supaUser.email?.split('@')[0] ??
+      'phantom',
+    email: supaUser.email ?? '',
+    emailVerified: Boolean(supaUser.email_confirmed_at),
+    plan: (profile?.plan as Plan | undefined) ?? 'free',
     llmProvider,
     onboardingCompleted: Boolean(profile?.onboarding_completed),
     stripeCustomerId: profile?.stripe_customer_id as string | undefined,
@@ -94,93 +79,128 @@ function shapeUser(fbUser: FirebaseUser, profile: Record<string, unknown> | null
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!isFirebaseConfigured) {
+    if (!isSupabaseConfigured) {
       setLoading(false)
       return
     }
 
-    let profileUnsub: Unsubscribe | null = null
+    // Load the initial session from local storage synchronously.
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      if (!data.session) {
+        setUser(null)
+        setLoading(false)
+      }
+    })
 
-    const unsub = onAuthStateChanged(auth, (fbUser) => {
-      profileUnsub?.()
-      profileUnsub = null
+    // Subscribe to auth state changes.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      setSession(newSession)
 
-      setFirebaseUser(fbUser)
-
-      if (!fbUser) {
+      if (!newSession) {
         setUser(null)
         setLoading(false)
         return
       }
 
-      // Subscribe to users/{uid} so plan + onboarding flips reach the UI live.
-      // Doc is created server-side by the Auth onCreate trigger; until it lands,
-      // we shape from the firebase user alone with safe defaults.
-      profileUnsub = onSnapshot(
-        doc(db, 'users', fbUser.uid),
-        (snap) => {
-          setUser(shapeUser(fbUser, snap.exists() ? snap.data() : null))
-          setLoading(false)
-        },
-        () => {
-          setUser(shapeUser(fbUser, null))
-          setLoading(false)
-        },
-      )
+      // Fetch the users row so plan + onboarding changes reach the UI.
+      // The bootstrapUser API route creates this row on first sign-up.
+      const { data: profile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', newSession.user.id)
+        .single()
+
+      setUser(shapeUser(newSession.user, profile))
+      setLoading(false)
     })
 
-    return () => {
-      profileUnsub?.()
-      unsub()
-    }
+    return () => subscription.unsubscribe()
   }, [])
 
-  const signup = useCallback(async (name: string, email: string, password: string) => {
-    if (!isFirebaseConfigured) throw NOT_CONFIGURED
-    try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password)
-      if (name) await updateProfile(cred.user, { displayName: name })
-      await sendEmailVerification(cred.user).catch(() => {})
-    } catch (err) {
-      const code = (err as { code?: string }).code ?? ''
-      throw new Error(authErrorMessage(code))
+  // Re-fetch profile whenever session changes so plan updates propagate.
+  useEffect(() => {
+    if (!session) return
+    let cancelled = false
+
+    supabase
+      .from('users')
+      .select('*')
+      .eq('id', session.user.id)
+      .single()
+      .then(({ data: profile }) => {
+        if (!cancelled && session) {
+          setUser(shapeUser(session.user, profile))
+          setLoading(false)
+        }
+      })
+
+    // Subscribe to realtime changes on the user's own row so plan flips
+    // (e.g. after Stripe webhook) reach the UI without a page refresh.
+    const channel = supabase
+      .channel(`user-profile-${session.user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${session.user.id}`,
+        },
+        (payload) => {
+          if (!cancelled && session) {
+            setUser(shapeUser(session.user, payload.new as Record<string, unknown>))
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      cancelled = true
+      supabase.removeChannel(channel)
     }
+  }, [session?.user.id])
+
+  const signup = useCallback(async (name: string, email: string, password: string) => {
+    if (!isSupabaseConfigured) throw NOT_CONFIGURED
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name } },
+    })
+    if (error) throw new Error(authErrorMessage(error.message))
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    if (!isFirebaseConfigured) throw NOT_CONFIGURED
-    try {
-      await signInWithEmailAndPassword(auth, email, password)
-    } catch (err) {
-      const code = (err as { code?: string }).code ?? ''
-      throw new Error(authErrorMessage(code))
-    }
+    if (!isSupabaseConfigured) throw NOT_CONFIGURED
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw new Error(authErrorMessage(error.message))
   }, [])
 
   const loginWithGoogle = useCallback(async () => {
-    if (!isFirebaseConfigured) throw NOT_CONFIGURED
-    try {
-      await signInWithPopup(auth, googleProvider)
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[phantom] Google sign-in failed:', err)
-      const code = (err as { code?: string }).code ?? ''
-      throw new Error(authErrorMessage(code))
-    }
+    if (!isSupabaseConfigured) throw NOT_CONFIGURED
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        queryParams: { prompt: 'select_account' },
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) throw new Error(authErrorMessage(error.message))
   }, [])
 
   const logout = useCallback(async () => {
-    if (!isFirebaseConfigured) return
-    await signOut(auth)
+    if (!isSupabaseConfigured) return
+    await supabase.auth.signOut()
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, loading, login, loginWithGoogle, signup, logout }}>
+    <AuthContext.Provider value={{ user, session, loading, login, loginWithGoogle, signup, logout }}>
       {children}
     </AuthContext.Provider>
   )

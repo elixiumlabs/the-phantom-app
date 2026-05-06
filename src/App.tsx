@@ -44,6 +44,7 @@ import SystemStatusPage from '@/pages/SystemStatusPage'
 import AffiliatesPage from '@/pages/AffiliatesPage'
 import DiagnosticPage from '@/pages/DiagnosticPage'
 import IntegrationsHelpPage from '@/pages/IntegrationsHelpPage'
+import AuthCallbackPage from '@/pages/AuthCallbackPage'
 
 const LandingPage = memo(() => (
   <div className="relative min-h-screen">
@@ -115,6 +116,7 @@ const AppRoutes = memo(() => (
     <Route path="/signup" element={
       <RedirectIfAuthed><AuthPage mode="signup" /></RedirectIfAuthed>
     } />
+    <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
     <Route path="/onboarding" element={
       <RequireOnboarding><OnboardingPage /></RequireOnboarding>
