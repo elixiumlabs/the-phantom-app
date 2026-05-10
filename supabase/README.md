@@ -1,43 +1,41 @@
-# Supabase Setup — Phase 1
+# Supabase Setup
 
 Run these SQL files in order in the Supabase SQL Editor.
-Dashboard → SQL Editor → New query → paste → Run.
-
-## Order
 
 | File | What it does |
 |---|---|
-| `01_schema.sql` | Creates all tables, types, indexes, and updated_at triggers |
-| `02_rls.sql` | Enables RLS and creates all security policies |
-| `03_cron.sql` | Schedules inactivity nudge + integration sync jobs |
+| `01_schema.sql` | Creates tables, types, indexes, and `updated_at` triggers |
+| `02_rls.sql` | Enables row level security and owner policies |
+| `03_cron.sql` | Schedules Vercel cron-backed jobs |
+| `04_post_gcp_migration_fixes.sql` | Adds post-migration columns, webhook keys, summaries, and compatibility triggers |
 
-## Before running 03_cron.sql
+## Environment
 
-Replace the two placeholders in that file:
-- `YOUR_VERCEL_URL` → your Vercel deployment URL (e.g. `https://the-phantom-app.vercel.app`)
-- `YOUR_CRON_SECRET` → a random secret string you generate (e.g. `openssl rand -hex 32`)
+Vercel needs:
 
-Store that same secret as `CRON_SECRET` in your Vercel environment variables.
-Your Vercel API routes at `/api/cron/*` must check for this header before executing.
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_WEBHOOK_SECRET`
+- `CRON_SECRET`
+- AI provider keys such as `GEMINI_API_KEY` and `GROQ_API_KEY`
+- Stripe keys and webhook secret
 
-## Supabase project settings to note
+The Vite frontend needs:
 
-After creating your project, grab these from Settings → API:
-- `SUPABASE_URL` — the project URL
-- `SUPABASE_ANON_KEY` — for the frontend client
-- `SUPABASE_SERVICE_ROLE_KEY` — for the backend API routes (never expose to client)
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- Stripe price IDs
 
-## Storage bucket
+## Storage
 
-Create one bucket manually in Storage → New bucket:
-- Name: `proof-vault`
-- Public: No (private)
+Create these buckets:
 
-RLS on the bucket is configured via the Storage policies UI or SQL.
-Add this policy after creating the bucket:
+- `proof-vault`: private, used for customer proof uploads
+- `phantom-app`: public, used for marketing/static image assets
+
+For `proof-vault`, allow authenticated users to manage files inside their own folder:
 
 ```sql
--- Allow authenticated users to upload to their own folder
 create policy "proof-vault: owner upload"
   on storage.objects for insert
   with check (
@@ -60,15 +58,7 @@ create policy "proof-vault: owner delete"
   );
 ```
 
-## Auth providers
+## Auth
 
-In Authentication → Providers:
-- Enable **Email** (enabled by default)
-- Enable **Google** — add your OAuth client ID + secret from Google Cloud Console
+Enable Email auth. Enable Google OAuth in Supabase if Google sign-in should remain available.
 
-## What's next (Phase 2–5)
-
-- Phase 2: Swap Firebase Auth → Supabase Auth in `src/contexts/AuthContext.tsx`
-- Phase 3: Port `functions/` to Vercel API routes in `api/`
-- Phase 4: Swap Firestore `onSnapshot` → Supabase Realtime in `src/contexts/ProjectContext.tsx`
-- Phase 5: Deploy frontend to Vercel, configure env vars, test end-to-end
