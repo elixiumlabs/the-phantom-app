@@ -1,24 +1,10 @@
 import { memo, useEffect, useState } from 'react'
 import { Plus, Trash2, Filter, Loader, Edit2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  addDoc,
-  collection,
-  collectionGroup,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-  type DocumentData,
-  type Unsubscribe,
-} from 'firebase/firestore'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects } from '@/contexts/ProjectContext'
-import { db } from '@/lib/firebase'
+import { supabase } from '@/lib/supabase'
+import { deleteOutreachLog, insertOutreachLog, updateOutreachLog } from '@/lib/supabaseData'
 import AppSidebar from '@/components/app/AppSidebar'
 
 // Cross-project signal type. Maps to outreach_log entries:
@@ -83,64 +69,43 @@ const SignalTrackerPage = memo(() => {
     notes: '',
   })
 
-  // Subscribe to ALL outreach_log entries the user owns via collectionGroup.
-  // Rules require project ownership; we filter client-side by membership in
-  // the user's projects list (rules deny anything else, so the listener will
-  // simply not return foreign docs even if our where() drifted).
+  // Subscribe to all outreach_log entries the user owns via Supabase RLS.
   useEffect(() => {
     if (!user) return
 
-    let unsub: Unsubscribe | null = null
     if (projects.length === 0) {
       setRows([])
       setLoading(false)
       return
     }
 
-    // Firestore `in` queries are capped at 30; for free-tier (1 active project)
-    // and even paid plans this is fine. For >30 projects we'd need to fan out.
-    const projectIds = projects.slice(0, 30).map((p) => p.id)
-
-    const q = query(
-      collectionGroup(db, 'outreach_log'),
-      where('project_id', 'in', projectIds),
-      orderBy('created_at', 'desc'),
-    )
-
-    unsub = onSnapshot(
-      q,
-      (snap) => {
-        setRows(
-          snap.docs.map((d) => {
-            const data = d.data() as DocumentData
-            return {
-              id: d.id,
-              project_id: data.project_id ?? d.ref.parent.parent?.id ?? '',
-              date: data.date ?? '',
-              platform: data.platform ?? '',
-              outreach_type: data.outreach_type ?? 'other',
-              identifier: data.identifier ?? '',
-              responded: !!data.responded,
-              converted: !!data.converted,
-              objection: data.objection ?? '',
-              notes: data.notes ?? '',
-              created_at: data.created_at?.toDate?.() ?? null,
-            }
-          }),
-        )
+    const projectIds = projects.map((p) => p.id)
+    let cancelled = false
+    const load = async () => {
+      const { data, error: err } = await supabase
+        .from('outreach_log')
+        .select('*')
+        .in('project_id', projectIds)
+        .order('created_at', { ascending: false })
+      if (cancelled) return
+      if (err) {
+        setError(err.message)
+      } else {
+        setRows((data ?? []).map((row) => ({ ...row, created_at: row.created_at ? new Date(row.created_at) : null })) as OutreachRow[])
         setLoading(false)
         setError(null)
-      },
-      (err) => {
-        // eslint-disable-next-line no-console
-        console.error('[phantom] outreach collectionGroup error:', err)
-        setError(err.message)
-        setLoading(false)
-      },
-    )
+      }
+    }
+    void load()
+
+    const channel = supabase
+      .channel(`signals-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'outreach_log', filter: `user_id=eq.${user.id}` }, () => void load())
+      .subscribe()
 
     return () => {
-      unsub?.()
+      cancelled = true
+      supabase.removeChannel(channel)
     }
   }, [user, projects])
 
@@ -193,12 +158,12 @@ const SignalTrackerPage = memo(() => {
 
     if (editingRow) {
       // Update existing entry
-      await updateDoc(doc(db, 'projects', form.project_id, 'outreach_log', editingRow.id), payload)
+      await updateOutreachLog(editingRow.id, payload)
     } else {
       // Create new entry
-      await addDoc(collection(db, 'projects', form.project_id, 'outreach_log'), {
+      await insertOutreachLog({
         ...payload,
-        created_at: serverTimestamp(),
+        user_id: user.id,
       })
     }
 
@@ -213,7 +178,7 @@ const SignalTrackerPage = memo(() => {
   }
 
   const remove = async (row: OutreachRow) => {
-    await deleteDoc(doc(db, 'projects', row.project_id, 'outreach_log', row.id))
+    await deleteOutreachLog(row.id)
   }
 
   const handleEdit = (row: OutreachRow) => {
@@ -278,9 +243,7 @@ const SignalTrackerPage = memo(() => {
           {error && (
             <div className="card mb-6 bg-phantom-danger/10 border-phantom-danger/30">
               <p className="font-body text-[13px] text-phantom-danger">{error}</p>
-              <p className="font-body text-[11px] text-phantom-text-muted mt-1">
-                If this mentions a missing index, deploy <span className="font-code">firestore.indexes.json</span> or follow the link in the browser console.
-              </p>
+              <p className="font-body text-[11px] text-phantom-text-muted mt-1">Check Supabase RLS policies and the outreach_log indexes if this persists.</p>
             </div>
           )}
 

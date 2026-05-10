@@ -36,7 +36,7 @@ export async function startCheckout(tier: Tier, cadence: Cadence): Promise<void>
 }
 
 export async function openBillingPortal(): Promise<void> {
-  const { url } = await createBillingPortalSession({})
+  const { url } = await createBillingPortalSession()
   if (!url) throw new Error('Stripe did not return a billing portal URL.')
   window.location.assign(url)
 }

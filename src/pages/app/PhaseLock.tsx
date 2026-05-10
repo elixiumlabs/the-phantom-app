@@ -2,10 +2,9 @@ import { memo, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Loader, Download, Sparkles, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 import { useProjects } from '@/contexts/ProjectContext'
 import { useVault } from '@/hooks'
+import { updateLockIn } from '@/lib/supabaseData'
 import {
   positioningFromData,
   recommendBrandIdentity,
@@ -29,8 +28,6 @@ const PhaseLock = memo(() => {
 
   // Enable protection for AI-generated content
   useProtection({ disableRightClick: true, monitorCopy: true })
-
-  const liRef = doc(db, 'projects', projectId, 'lock_in', 'main')
 
   // Buyer language (Phase 04 §1)
   const [buyerProblem, setBuyerProblem] = useState('')
@@ -78,37 +75,29 @@ const PhaseLock = memo(() => {
 
   // ----- Direct writes -----
   const saveBuyerLanguage = async () => {
-    await setDoc(
-      liRef,
-      {
-        buyer_problem_language: buyerProblem,
-        buyer_outcome_language: buyerOutcome,
-        buyer_prior_attempts: buyerPrior,
-        updated_at: serverTimestamp(),
-      },
-      { merge: true },
-    )
+    await updateLockIn(projectId, {
+      buyer_problem_language: buyerProblem,
+      buyer_outcome_language: buyerOutcome,
+      buyer_prior_attempts: buyerPrior,
+      updated_at: new Date().toISOString(),
+    })
   }
 
   const saveBrandIdentity = async () => {
-    await setDoc(
-      liRef,
-      {
-        final_brand_name: finalBrandName,
-        generated_positioning: generatedPositioning,
-        visual_direction: visualDirection || null,
-        final_voice_adjectives: voiceAdjectives
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
-        not_for: notFor,
-        'checklist.one_sentence_positioning': generatedPositioning.trim().length > 0,
-        'checklist.brand_from_data': !!visualDirection,
-        'checklist.not_for_defined': notFor.trim().length > 0,
-        updated_at: serverTimestamp(),
-      },
-      { merge: true },
-    )
+    await updateLockIn(projectId, {
+      final_brand_name: finalBrandName,
+      generated_positioning: generatedPositioning,
+      visual_direction: visualDirection || null,
+      final_voice_adjectives: voiceAdjectives
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      not_for: notFor,
+      checklist_one_sentence_positioning: generatedPositioning.trim().length > 0,
+      checklist_brand_from_data: !!visualDirection,
+      checklist_not_for_defined: notFor.trim().length > 0,
+      updated_at: new Date().toISOString(),
+    })
   }
 
   const handleExport = async () => {

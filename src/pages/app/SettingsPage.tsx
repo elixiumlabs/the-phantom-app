@@ -1,10 +1,8 @@
 import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Loader, Check } from 'lucide-react'
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore'
-import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth'
 import { useAuth, type LLMProvider } from '@/contexts/AuthContext'
-import { db, auth } from '@/lib/firebase'
+import { supabase } from '@/lib/supabase'
 import { startCheckout, openBillingPortal, getPriceId } from '@/lib/billing'
 import AppSidebar from '@/components/app/AppSidebar'
 
@@ -84,7 +82,8 @@ const SettingsPage = memo(() => {
     setLlmSaving(next)
     setLlmError(null)
     try {
-      await updateDoc(doc(db, 'users', user.id), { llm_provider: next })
+      const { error } = await supabase.from('users').update({ llm_provider: next }).eq('id', user.id)
+      if (error) throw new Error(error.message)
     } catch (err) {
       setLlmError(err instanceof Error ? err.message : 'Could not switch model.')
     } finally {
@@ -96,7 +95,8 @@ const SettingsPage = memo(() => {
     e.preventDefault()
     if (!user) return
     try {
-      await updateDoc(doc(db, 'users', user.id), { name })
+      const { error } = await supabase.from('users').update({ full_name: name }).eq('id', user.id)
+      if (error) throw new Error(error.message)
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (err) {
@@ -110,17 +110,16 @@ const SettingsPage = memo(() => {
     if (newPw.length < 6) { setPwError('Password must be at least 6 characters.'); return }
     if (newPw !== confirmPw) { setPwError('Passwords do not match.'); return }
     
-    const firebaseUser = auth.currentUser
-    if (!firebaseUser || !user?.email) {
+    if (!user?.email) {
       setPwError('Not authenticated.')
       return
     }
 
     try {
-      // Re-authenticate before password change
-      const credential = EmailAuthProvider.credential(user.email, currentPw)
-      await reauthenticateWithCredential(firebaseUser, credential)
-      await updatePassword(firebaseUser, newPw)
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: user.email, password: currentPw })
+      if (signInError) throw signInError
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPw })
+      if (updateError) throw updateError
       
       setCurrentPw('')
       setNewPw('')
@@ -128,9 +127,9 @@ const SettingsPage = memo(() => {
       setPwSaved(true)
       setTimeout(() => setPwSaved(false), 2500)
     } catch (err: any) {
-      if (err.code === 'auth/wrong-password') {
+      if (err.message?.toLowerCase().includes('invalid')) {
         setPwError('Current password is incorrect.')
-      } else if (err.code === 'auth/weak-password') {
+      } else if (err.message?.toLowerCase().includes('weak') || err.message?.toLowerCase().includes('password')) {
         setPwError('New password is too weak.')
       } else {
         setPwError(err.message || 'Failed to update password.')
@@ -148,24 +147,19 @@ const SettingsPage = memo(() => {
       return
     }
 
-    const firebaseUser = auth.currentUser
-    if (!firebaseUser || !user) return
+    if (!user) return
 
     setDeleting(true)
     setDeleteError('')
 
     try {
-      // Delete Firestore user doc first
-      await deleteDoc(doc(db, 'users', user.id))
-      // Delete Firebase Auth user
-      await deleteUser(firebaseUser)
-      // Logout will happen automatically via auth state listener
+      const { error } = await supabase.auth.updateUser({
+        data: { account_delete_requested_at: new Date().toISOString() },
+      })
+      if (error) throw error
+      await supabase.auth.signOut()
     } catch (err: any) {
-      if (err.code === 'auth/requires-recent-login') {
-        setDeleteError('Please log out and log back in, then try again.')
-      } else {
-        setDeleteError(err.message || 'Failed to delete account.')
-      }
+      setDeleteError(err.message || 'Failed to request account deletion.')
       setDeleting(false)
     }
   }
@@ -492,7 +486,7 @@ const AdminGrantProButton = memo(() => {
     try {
       const { adminGrantPro } = await import('@/lib/functions')
       await adminGrantPro({ plan: 'phantom_pro' })
-      // The Firestore listener will flip the plan automatically.
+      // The Supabase realtime listener will flip the plan automatically.
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not grant.')
     } finally {

@@ -2,19 +2,10 @@ import { memo, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Activity, AlertTriangle, BarChart3, ChevronDown, ChevronLeft, ChevronRight, Database, Loader, MessageSquareWarning, TrendingUp } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { collectionGroup, onSnapshot, orderBy, query, where, type Unsubscribe } from 'firebase/firestore'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects, type OutreachLog, type ProofVaultItem } from '@/contexts/ProjectContext'
-import { db } from '@/lib/firebase'
+import { supabase } from '@/lib/supabase'
 import AppSidebar from '@/components/app/AppSidebar'
-
-const MAX_IDS_PER_QUERY = 30
-
-function chunk<T>(items: T[], size: number): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size))
-  return out
-}
 
 function toDate(v: string | undefined) {
   if (!v) return null
@@ -91,51 +82,34 @@ const ValidationDashboardPage = memo(() => {
     setLoading(true)
     setError(null)
 
-    const chunks = chunk(projectIds, MAX_IDS_PER_QUERY)
-    const byChunk: Record<number, OutreachLog[]> = {}
-    const unsubs: Unsubscribe[] = []
+    let cancelled = false
+    const load = async () => {
+      const { data, error: err } = await supabase
+        .from('outreach_log')
+        .select('*')
+        .in('project_id', projectIds)
+        .order('created_at', { ascending: false })
+      if (cancelled) return
+      if (err) {
+        console.error('[validation-dashboard] error:', err)
+        setError(err.message || 'Could not load validation metrics.')
+      } else {
+        setRows((data ?? []) as OutreachLog[])
+        setError(null)
+      }
+      setLoading(false)
+    }
+    void load()
 
-    chunks.forEach((ids, idx) => {
-      const q = query(collectionGroup(db, 'outreach_log'), where('project_id', 'in', ids), orderBy('created_at', 'desc'))
-      const unsub = onSnapshot(
-        q,
-        (snap) => {
-          byChunk[idx] = snap.docs.map((d) => {
-            const data = d.data() as Record<string, unknown>
-            const createdAt = data.created_at as { toDate?: () => Date } | undefined
-            return {
-              id: d.id,
-              project_id: String(data.project_id ?? d.ref.parent.parent?.id ?? ''),
-              date: String(data.date ?? ''),
-              platform: String(data.platform ?? ''),
-              responded: Boolean(data.responded),
-              converted: Boolean(data.converted),
-              objection: String(data.objection ?? ''),
-              notes: String(data.notes ?? ''),
-              created_at: createdAt?.toDate?.()?.toISOString() ?? '',
-            }
-          })
+    const channel = supabase
+      .channel(`validation-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'outreach_log', filter: `user_id=eq.${user.id}` }, () => void load())
+      .subscribe()
 
-          setRows(
-            Object.values(byChunk)
-              .flat()
-              .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')),
-          )
-          setLoading(false)
-          setError(null)
-        },
-        (err) => {
-          // eslint-disable-next-line no-console
-          console.error('[validation-dashboard] error:', err)
-          setLoading(false)
-          setError(err.message || 'Could not load validation metrics.')
-        },
-      )
-
-      unsubs.push(unsub)
-    })
-
-    return () => unsubs.forEach((u) => u())
+    return () => {
+      cancelled = true
+      supabase.removeChannel(channel)
+    }
   }, [user, projects])
 
   const activeProjects = useMemo(() => projects.filter((p) => p.status === 'active'), [projects])

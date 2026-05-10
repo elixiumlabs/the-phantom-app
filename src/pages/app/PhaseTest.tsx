@@ -2,16 +2,8 @@ import { memo, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Plus, Trash2, Lock, Unlock, Loader, ExternalLink } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  serverTimestamp,
-  setDoc,
-} from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 import { useProjects } from '@/contexts/ProjectContext'
+import { deleteOutreachLog, insertOutreachLog, updateSilentTest } from '@/lib/supabaseData'
 import {
   buildMinimumOffer,
   generateOutreach,
@@ -39,9 +31,6 @@ const PhaseTest = memo(() => {
 
   // Enable protection for AI-generated content
   useProtection({ disableRightClick: true, monitorCopy: true })
-
-  // Sub-doc ref shortcut
-  const stRef = doc(db, 'projects', projectId, 'silent_test', 'main')
 
   // Local form state — hydrate from snapshot
   const [offerName, setOfferName] = useState('')
@@ -122,59 +111,47 @@ const PhaseTest = memo(() => {
     )
   }
 
-  // ----- Direct Firestore writes (rules allow these) -----
+  // ----- Direct Supabase writes -----
   const saveOffer = async () => {
-    await setDoc(
-      stRef,
-      {
-        offer_name: offerName,
-        offer_type: offerType || null,
-        offer_outcome: offerOutcome,
-        offer_price: offerPrice ? Number(offerPrice) : null,
-        offer_currency: 'USD',
-        delivery_method: offerDelivery,
-        offer_includes: offerIncludesRaw
-          .split('\n')
-          .map((s) => s.trim())
-          .filter(Boolean),
-        'checklist.offer_built':
-          offerName.trim().length > 0 && offerOutcome.trim().length > 0,
-        updated_at: serverTimestamp(),
-      },
-      { merge: true },
-    )
+    await updateSilentTest(projectId, {
+      offer_name: offerName,
+      offer_type: offerType || null,
+      offer_outcome: offerOutcome,
+      offer_price: offerPrice ? Number(offerPrice) : null,
+      offer_currency: 'USD',
+      delivery_method: offerDelivery,
+      offer_includes: offerIncludesRaw
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      checklist_offer_built: offerName.trim().length > 0 && offerOutcome.trim().length > 0,
+      updated_at: new Date().toISOString(),
+    })
   }
 
   const confirmParams = async () => {
-    await setDoc(
-      stRef,
-      {
-        test_sample_size: targetSampleSize ? Number(targetSampleSize) : null,
-        target_conversion_rate: targetConversion ? Number(targetConversion) : null,
-        failed_test_criteria: failedTestCriteria,
-        'checklist.parameters_set': true,
-        updated_at: serverTimestamp(),
-      },
-      { merge: true },
-    )
+    await updateSilentTest(projectId, {
+      test_sample_size: targetSampleSize ? Number(targetSampleSize) : null,
+      target_conversion_rate: targetConversion ? Number(targetConversion) : null,
+      failed_test_criteria: failedTestCriteria,
+      checklist_parameters_set: true,
+      updated_at: new Date().toISOString(),
+    })
     setParamsConfirmed(true)
   }
 
   const editParams = async () => {
-    await setDoc(
-      stRef,
-      {
-        'checklist.parameters_set': false,
-        updated_at: serverTimestamp(),
-      },
-      { merge: true },
-    )
+    await updateSilentTest(projectId, {
+      checklist_parameters_set: false,
+      updated_at: new Date().toISOString(),
+    })
     setParamsConfirmed(false)
   }
 
   const addOutreachEntry = async () => {
     if (!newEntry.platform.trim()) return
-    await addDoc(collection(db, 'projects', projectId, 'outreach_log'), {
+    await insertOutreachLog({
+      user_id: currentProject.user_id,
       project_id: projectId,
       date: new Date().toISOString().slice(0, 10),
       platform: newEntry.platform.trim(),
@@ -184,7 +161,6 @@ const PhaseTest = memo(() => {
       converted: newEntry.converted,
       objection: newEntry.objection.trim(),
       notes: newEntry.notes.trim(),
-      created_at: serverTimestamp(),
     })
     setNewEntry({
       platform: '',
@@ -199,19 +175,15 @@ const PhaseTest = memo(() => {
   }
 
   const removeEntry = async (entryId: string) => {
-    await deleteDoc(doc(db, 'projects', projectId, 'outreach_log', entryId))
+    await deleteOutreachLog(entryId)
   }
 
   const saveSalesPage = async () => {
-    await setDoc(
-      stRef,
-      {
-        sales_page: salesPageData,
-        'checklist.sales_page_built': !!(salesPageData.headline && salesPageData.problem && salesPageData.cta),
-        updated_at: serverTimestamp(),
-      },
-      { merge: true },
-    )
+    await updateSilentTest(projectId, {
+      sales_page: salesPageData,
+      checklist_sales_page_built: !!(salesPageData.headline && salesPageData.problem && salesPageData.cta),
+      updated_at: new Date().toISOString(),
+    })
   }
 
   const loadTemplate = (templateName: string) => {

@@ -2,15 +2,9 @@ import { memo, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Plus, Loader, ExternalLink, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  addDoc,
-  collection,
-  doc,
-  serverTimestamp,
-  setDoc,
-} from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 import { useProjects } from '@/contexts/ProjectContext'
+import { insertIterationVersion, updateIterationLoop } from '@/lib/supabaseData'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   diagnoseOffer,
   suggestIteration,
@@ -25,6 +19,7 @@ const PhaseIterate = memo(() => {
   const { id } = useParams()
   const navigate = useNavigate()
   const projectId = id!
+  const { user } = useAuth()
   const {
     currentProject,
     iterationLoop,
@@ -35,8 +30,6 @@ const PhaseIterate = memo(() => {
 
   // Enable protection for AI-generated content
   useProtection({ disableRightClick: true, monitorCopy: true })
-
-  const ilRef = doc(db, 'projects', projectId, 'iteration_loop', 'main')
 
   const [privateNotes, setPrivateNotes] = useState('')
   const [audienceForGap, setAudienceForGap] = useState('')
@@ -71,34 +64,29 @@ const PhaseIterate = memo(() => {
 
   // ----- Direct writes -----
   const savePrivateNotes = async () => {
-    await setDoc(ilRef, { private_notes: privateNotes, updated_at: serverTimestamp() }, { merge: true })
+    await updateIterationLoop(projectId, { private_notes: privateNotes, updated_at: new Date().toISOString() })
   }
 
   const addVersion = async () => {
-    if (!newVersion.what_changed.trim()) return
-    await addDoc(collection(db, 'projects', projectId, 'iteration_versions'), {
+    if (!newVersion.what_changed.trim() || !user) return
+    await insertIterationVersion({
+      user_id: user.id,
       project_id: projectId,
-      // version_number is server-stamped by the iterationTriggers function.
       date: new Date().toISOString().slice(0, 10),
       what_changed: newVersion.what_changed.trim(),
       single_variable: newVersion.single_variable,
       result: newVersion.result.trim(),
       new_conversion_rate: newVersion.new_conversion_rate ? Number(newVersion.new_conversion_rate) : null,
-      created_at: serverTimestamp(),
     })
     setNewVersion({ what_changed: '', single_variable: true, result: '', new_conversion_rate: '' })
     setShowVersionForm(false)
 
     // Mark log_documented + one_iteration on the iteration_loop checklist.
-    await setDoc(
-      ilRef,
-      {
-        'checklist.log_documented': true,
-        'checklist.one_iteration': true,
-        updated_at: serverTimestamp(),
-      },
-      { merge: true },
-    )
+    await updateIterationLoop(projectId, {
+      checklist_log_documented: true,
+      checklist_one_iteration: true,
+      updated_at: new Date().toISOString(),
+    })
   }
 
   const toggleExpanded = (vid: string) => {
@@ -137,14 +125,10 @@ const PhaseIterate = memo(() => {
   }
 
   const toggleObjectionsReduced = async () => {
-    await setDoc(
-      ilRef,
-      {
-        'checklist.objections_reduced': !checklist.objections_reduced,
-        updated_at: serverTimestamp(),
-      },
-      { merge: true },
-    )
+    await updateIterationLoop(projectId, {
+      checklist_objections_reduced: !checklist.objections_reduced,
+      updated_at: new Date().toISOString(),
+    })
   }
 
   return (

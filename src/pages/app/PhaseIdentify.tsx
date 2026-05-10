@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Loader, Sparkles, CheckCircle, Upload, Linkedin } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useProjects } from '@/contexts/ProjectContext'
-import { doc, updateDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { updateGhostIdentity } from '@/lib/supabaseData'
 import {
   refineProblemStatement,
   extractUnfairAdvantages,
@@ -48,7 +47,7 @@ const PhaseIdentify = memo(() => {
   // Resume state
   const [resumeFile, setResumeFile] = useState<File | null>(null)
 
-  // Sync Firestore data to local state
+  // Sync Supabase data to local state
   useEffect(() => {
     if (ghostIdentity) {
       setProblemDraft(ghostIdentity.problem_statement || '')
@@ -68,8 +67,6 @@ const PhaseIdentify = memo(() => {
     )
   }
 
-  const projectRef = doc(db, 'projects', id!, 'ghost_identity', 'main')
-
   // ========================================
   // AI GENERATORS
   // ========================================
@@ -83,7 +80,7 @@ const PhaseIdentify = memo(() => {
     setError('')
     try {
       await refineProblemStatement({ draft: problemDraft, project_id: id })
-      // AI options are auto-saved to Firestore by backend
+      // AI options are auto-saved to Supabase by the backend.
       setRefiningProblem(false)
     } catch (err: any) {
       console.error('refineProblemStatement error:', err)
@@ -142,29 +139,29 @@ const PhaseIdentify = memo(() => {
   // ========================================
 
   const saveProblemStatement = async (statement: string) => {
-    await updateDoc(projectRef, {
+    await updateGhostIdentity(id!, {
       problem_statement: statement,
-      'checklist.problem_written': true,
+      checklist_problem_written: true,
       updated_at: new Date().toISOString(),
     })
   }
 
   const saveAdvantages = async (advantages: string[]) => {
-    await updateDoc(projectRef, {
+    await updateGhostIdentity(id!, {
       unfair_advantages: advantages,
-      'checklist.advantages_mapped': advantages.length >= 3,
+      checklist_advantages_mapped: advantages.length >= 3,
       updated_at: new Date().toISOString(),
     })
     setSelectedAdvantages(advantages)
   }
 
   const savePositioning = async (positioning: string, name: string, voice: string[]) => {
-    await updateDoc(projectRef, {
+    await updateGhostIdentity(id!, {
       positioning_statement: positioning,
       working_name: name,
       voice_adjectives: voice,
-      'checklist.positioning_written': !!positioning,
-      'checklist.voice_defined': voice.length > 0,
+      checklist_positioning_written: !!positioning,
+      checklist_voice_defined: voice.length > 0,
       updated_at: new Date().toISOString(),
     })
     // Show success feedback
@@ -172,9 +169,9 @@ const PhaseIdentify = memo(() => {
   }
 
   const saveAntiCustomers = async (customers: string[]) => {
-    await updateDoc(projectRef, {
+    await updateGhostIdentity(id!, {
       anti_customers: customers,
-      'checklist.anti_customers_defined': customers.length >= 2,
+      checklist_anti_customers_defined: customers.length >= 2,
       updated_at: new Date().toISOString(),
     })
     setAntiCustomers(customers)

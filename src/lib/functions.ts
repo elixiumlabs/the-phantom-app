@@ -41,7 +41,7 @@ export const skipOnboarding = () =>
   call<Record<string, never>, { ok: true }>('automations/skip-onboarding', {})
 
 export const adminGrantPro = (data: { uid?: string; plan?: 'phantom' | 'phantom_pro' }) =>
-  call<typeof data, { ok: true; uid: string; plan: string }>('automations/admin-grant-pro', data)
+  call<typeof data, { ok: true; uid: string; plan: string }>('automations/admin-grant', data)
 
 export const deleteProject = (data: { project_id: string }) =>
   call<typeof data, { ok: boolean }>('automations/delete-project', data)
@@ -263,7 +263,21 @@ export const requestProofUploadUrl = (data: {
   amount?: number
   source?: string
 }) =>
-  call<typeof data, { upload_url: string; storage_path: string; item_id: string }>('storage/proof-upload-url', data)
+  call<typeof data, { upload_url: string; storage_path: string; item_id: string; token: string }>('storage/proof-upload-url', data)
+
+export const finalizeProofUpload = (data: {
+  user_id: string
+  project_id: string
+  proof_type: 'screenshot' | 'testimonial' | 'case_study' | 'revenue' | 'conversion_data'
+  title?: string
+  storage_path: string
+  content_type?: string
+  amount?: number
+  source?: string
+}) => call<typeof data, { id: string }>('storage/proof-finalize', data)
+
+export const generateWebhookKey = (data: { regenerate?: boolean }) =>
+  call<typeof data, { webhook_key: string; webhook_url: string; message: string }>('automations/generate-webhook-key', data)
 
 // ========================================
 // STRIPE

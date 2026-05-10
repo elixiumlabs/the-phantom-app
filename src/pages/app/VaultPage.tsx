@@ -1,13 +1,12 @@
 import { memo, useMemo, useRef, useState } from 'react'
 import { Plus, Trash2, TrendingUp, MessageSquare, FileText, Camera, Filter, Upload, Loader, ExternalLink, Edit2, Link as LinkIcon, Copy, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { addDoc, collection, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects, type ProofVaultItem } from '@/contexts/ProjectContext'
 import { useVault } from '@/hooks'
-import { db } from '@/lib/firebase'
-import { requestProofUploadUrl, getIntegrationAuthUrl } from '@/lib/functions'
-import { generateWebhookKey } from '@/lib/webhook'
+import { supabase } from '@/lib/supabase'
+import { finalizeProofUpload, generateWebhookKey, getIntegrationAuthUrl, requestProofUploadUrl } from '@/lib/functions'
+import { deleteProofVaultItem, insertProofVaultItem, updateProofVaultItem } from '@/lib/supabaseData'
 import AppSidebar from '@/components/app/AppSidebar'
 
 type BackendProofType = ProofVaultItem['proof_type']
@@ -156,7 +155,7 @@ const VaultPage = memo(() => {
           formType === 'testimonial' ? testimonialForm.dateCollected :
           null
         
-        await updateDoc(doc(db, 'proof_vault', editingItem.id), {
+        await updateProofVaultItem(editingItem.id, {
           title: deriveTitle(formType, { resultForm, testimonialForm, caseForm, landingPageForm, adPerformanceForm, surveyForm, preorderForm, competitorForm, marketResearchForm }),
           content,
           amount,
@@ -167,28 +166,25 @@ const VaultPage = memo(() => {
         if (!ALLOWED_FILE.test(selectedFile.type)) {
           throw new Error(`Unsupported file type: ${selectedFile.type || 'unknown'}`)
         }
-        const { upload_url } = await requestProofUploadUrl({
+        const { storage_path, token } = await requestProofUploadUrl({
           project_id: projectId,
           proof_type: 'screenshot',
           filename: selectedFile.name,
           content_type: selectedFile.type,
           title: screenshotForm.title.trim() || undefined,
         })
-        const res = await fetch(upload_url, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': selectedFile.type,
-            'x-goog-meta-uid': user.id,
-            'x-goog-meta-project-id': projectId,
-            'x-goog-meta-proof-type': 'screenshot',
-            'x-goog-meta-title': screenshotForm.title.trim() || '',
-            'x-goog-meta-source': '',
-            'x-goog-meta-amount': '',
-          },
-          body: selectedFile,
+        const { error: uploadError } = await supabase.storage
+          .from('proof-vault')
+          .uploadToSignedUrl(storage_path, token, selectedFile)
+        if (uploadError) throw new Error(uploadError.message)
+        await finalizeProofUpload({
+          user_id: user.id,
+          project_id: projectId,
+          proof_type: 'screenshot',
+          title: screenshotForm.title.trim() || selectedFile.name,
+          storage_path,
+          content_type: selectedFile.type,
         })
-        if (!res.ok) throw new Error(`Upload failed (${res.status})`)
-        // The onFinalize trigger will create the proof_vault doc.
       } else {
         const content = formatContent(formType, { resultForm, testimonialForm, caseForm, landingPageForm, adPerformanceForm, surveyForm, preorderForm, competitorForm, marketResearchForm })
         const amount =
@@ -197,7 +193,7 @@ const VaultPage = memo(() => {
           formType === 'revenue' ? resultForm.date :
           formType === 'testimonial' ? testimonialForm.dateCollected :
           null
-        await addDoc(collection(db, 'proof_vault'), {
+        await insertProofVaultItem({
           user_id: user.id,
           project_id: projectId,
           proof_type: formType,
@@ -209,7 +205,6 @@ const VaultPage = memo(() => {
           tags: [],
           content_type: null,
           size: null,
-          created_at: serverTimestamp(),
         })
       }
 
@@ -261,7 +256,7 @@ const VaultPage = memo(() => {
   const handleDelete = async (item: ProofVaultItem) => {
     if (!confirm('Delete this proof item?')) return
     try {
-      await deleteDoc(doc(db, 'proof_vault', item.id))
+      await deleteProofVaultItem(item.id)
     } catch (err) {
       console.error('[phantom] delete proof failed:', err)
     }
@@ -272,8 +267,8 @@ const VaultPage = memo(() => {
     try {
       const result = await generateWebhookKey({ regenerate: !!webhookData })
       setWebhookData({
-        key: result.data.webhook_key,
-        url: result.data.webhook_url,
+        key: result.webhook_key,
+        url: result.webhook_url,
       })
     } catch (err) {
       console.error('[phantom] webhook generation failed:', err)

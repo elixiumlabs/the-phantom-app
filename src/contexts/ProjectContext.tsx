@@ -1,7 +1,13 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
-import { collection, query, where, onSnapshot, doc, type Unsubscribe } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 import { useAuth } from './AuthContext'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import {
+  fetchProjects,
+  mapGhostIdentity,
+  mapIterationLoop,
+  mapLockIn,
+  mapSilentTest,
+} from '@/lib/supabaseData'
 
 export type Phase = 1 | 2 | 3 | 4
 
@@ -217,27 +223,39 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // Subscribe to user's projects
   useEffect(() => {
-    if (!user) {
+    if (!isSupabaseConfigured || !user) {
       setProjects([])
       setLoading(false)
       return
     }
 
-    const q = query(collection(db, 'projects'), where('user_id', '==', user.id))
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Project))
+    let cancelled = false
+    const load = async () => {
+      try {
+        const data = await fetchProjects(user.id)
+        if (cancelled) return
         setProjects(data)
         setLoading(false)
-      },
-      (err) => {
+      } catch (err) {
         console.error('[ProjectContext] Failed to load projects:', err)
         setLoading(false)
       }
-    )
+    }
+    void load()
 
-    return unsub
+    const channel = supabase
+      .channel(`projects-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'projects', filter: `user_id=eq.${user.id}` },
+        () => void load(),
+      )
+      .subscribe()
+
+    return () => {
+      cancelled = true
+      supabase.removeChannel(channel)
+    }
   }, [user])
 
   // Subscribe to current project's subcollections
@@ -252,54 +270,40 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const projectRef = doc(db, 'projects', currentProjectId)
-    const unsubs: Unsubscribe[] = []
+    let cancelled = false
+    const load = async () => {
+      const [gi, st, il, li, outreach, versions] = await Promise.all([
+        supabase.from('ghost_identity').select('*').eq('project_id', currentProjectId).maybeSingle(),
+        supabase.from('silent_test').select('*').eq('project_id', currentProjectId).maybeSingle(),
+        supabase.from('iteration_loop').select('*').eq('project_id', currentProjectId).maybeSingle(),
+        supabase.from('lock_in').select('*').eq('project_id', currentProjectId).maybeSingle(),
+        supabase.from('outreach_log').select('*').eq('project_id', currentProjectId).order('created_at', { ascending: false }),
+        supabase.from('iteration_versions').select('*').eq('project_id', currentProjectId).order('version_number', { ascending: false }),
+      ])
+      if (cancelled) return
+      setGhostIdentity(mapGhostIdentity(gi.data))
+      setSilentTest(mapSilentTest(st.data))
+      setIterationLoop(mapIterationLoop(il.data))
+      setLockIn(mapLockIn(li.data))
+      setOutreachLog((outreach.data ?? []) as OutreachLog[])
+      setIterationVersions((versions.data ?? []) as IterationVersion[])
+    }
+    void load()
 
-    // ghost_identity
-    unsubs.push(
-      onSnapshot(doc(projectRef, 'ghost_identity', 'main'), (snap) => {
-        setGhostIdentity(snap.exists() ? (snap.data() as GhostIdentity) : null)
-      })
-    )
+    const channel = supabase
+      .channel(`project-detail-${currentProjectId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ghost_identity', filter: `project_id=eq.${currentProjectId}` }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'silent_test', filter: `project_id=eq.${currentProjectId}` }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'iteration_loop', filter: `project_id=eq.${currentProjectId}` }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lock_in', filter: `project_id=eq.${currentProjectId}` }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'outreach_log', filter: `project_id=eq.${currentProjectId}` }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'iteration_versions', filter: `project_id=eq.${currentProjectId}` }, () => void load())
+      .subscribe()
 
-    // silent_test
-    unsubs.push(
-      onSnapshot(doc(projectRef, 'silent_test', 'main'), (snap) => {
-        setSilentTest(snap.exists() ? (snap.data() as SilentTest) : null)
-      })
-    )
-
-    // iteration_loop
-    unsubs.push(
-      onSnapshot(doc(projectRef, 'iteration_loop', 'main'), (snap) => {
-        setIterationLoop(snap.exists() ? (snap.data() as IterationLoop) : null)
-      })
-    )
-
-    // lock_in
-    unsubs.push(
-      onSnapshot(doc(projectRef, 'lock_in', 'main'), (snap) => {
-        setLockIn(snap.exists() ? (snap.data() as LockIn) : null)
-      })
-    )
-
-    // outreach_log
-    unsubs.push(
-      onSnapshot(collection(projectRef, 'outreach_log'), (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as OutreachLog))
-        setOutreachLog(data)
-      })
-    )
-
-    // iteration_versions
-    unsubs.push(
-      onSnapshot(collection(projectRef, 'iteration_versions'), (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as IterationVersion))
-        setIterationVersions(data.sort((a, b) => (b.version_number || 0) - (a.version_number || 0)))
-      })
-    )
-
-    return () => unsubs.forEach((u) => u())
+    return () => {
+      cancelled = true
+      supabase.removeChannel(channel)
+    }
   }, [currentProjectId])
 
   // Subscribe to user's proof vault
@@ -309,13 +313,25 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const q = query(collection(db, 'proof_vault'), where('user_id', '==', user.id))
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ProofVaultItem))
-      setProofVault(data)
-    })
+    let cancelled = false
+    const load = async () => {
+      const { data, error } = await supabase
+        .from('proof_vault')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+      if (!cancelled && !error) setProofVault((data ?? []) as ProofVaultItem[])
+    }
+    void load()
+    const channel = supabase
+      .channel(`project-vault-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'proof_vault', filter: `user_id=eq.${user.id}` }, () => void load())
+      .subscribe()
 
-    return unsub
+    return () => {
+      cancelled = true
+      supabase.removeChannel(channel)
+    }
   }, [user])
 
   const currentProject = projects.find((p) => p.id === currentProjectId) ?? null
