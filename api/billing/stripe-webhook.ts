@@ -27,7 +27,7 @@ async function getRawBody(req: VercelRequest): Promise<Buffer> {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).send('method not allowed')
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
   const sig = req.headers['stripe-signature']
   if (typeof sig !== 'string') return res.status(400).send('missing signature')
 

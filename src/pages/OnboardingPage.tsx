@@ -36,10 +36,10 @@ const OnboardingPage = memo(() => {
   const [error, setError] = useState<string | null>(null)
   const [pendingDestination, setPendingDestination] = useState<string | null>(null)
 
-  // The server flips onboarding_completed via Firestore. RequireAuth reads
+  // The server flips onboarding_completed via Supabase. RequireAuth reads
   // that flag and bounces back to /onboarding if it's still false at the
   // moment we navigate. So: once we've kicked off the call, wait for the
-  // live AuthContext snapshot to show onboarding_completed=true *before*
+  // live AuthContext snapshot to show onboarding_completed=true before
   // routing into the gated app.
   useEffect(() => {
     if (pendingDestination && user?.onboardingCompleted) {
@@ -93,7 +93,7 @@ const OnboardingPage = memo(() => {
     setSubmitting(true)
     setError(null)
     try {
-      await skipOnboarding({})
+      await skipOnboarding()
       setPendingDestination('/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not skip onboarding.')

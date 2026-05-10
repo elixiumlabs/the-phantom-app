@@ -1,10 +1,11 @@
 import type { IncomingMessage } from 'http'
-import { requireAuth, getUserPlan, apiError, type Plan } from './auth'
+import { requireAuth, getUserPlan, requirePlan, apiError, type Plan } from './auth'
 import { rateLimit } from './rateLimit'
 import { FREE_LIMITS } from './schemas'
 import { adminClient } from './supabase'
 
 export type { Plan }
+export { requirePlan }
 
 export async function gate(req: IncomingMessage): Promise<string> {
   const uid = await requireAuth(req)

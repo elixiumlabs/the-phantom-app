@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const customerId = user?.stripe_customer_id as string | undefined
     if (!customerId) throw apiError(412, 'No Stripe customer on file')
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
     const baseUrl = process.env.APP_URL || 'https://phantom.app'
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,

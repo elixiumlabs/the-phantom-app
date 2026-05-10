@@ -140,7 +140,7 @@ const SignalTrackerPage = memo(() => {
   const projectName = (id: string) => projects.find((p) => p.id === id)?.name ?? '—'
 
   const submit = async () => {
-    if (!form.project_id || !form.platform.trim()) return
+    if (!user || !form.project_id || !form.platform.trim()) return
 
     // Map derived type → outreach_log columns. Notes carry into objection
     // when type is objection, otherwise into notes.

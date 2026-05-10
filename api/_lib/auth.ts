@@ -1,6 +1,8 @@
 import type { IncomingMessage } from 'http'
 import { adminClient, type Plan } from './supabase'
 
+export type { Plan }
+
 export interface AuthContext {
   uid: string
   plan: Plan

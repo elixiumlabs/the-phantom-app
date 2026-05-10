@@ -46,7 +46,7 @@ export async function generateJSON<T>(opts: JsonCallOpts): Promise<T> {
       raw = await callGroq({ user: opts.user, system, maxTokens, temperature, model })
     }
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).status) throw err
+    if (typeof (err as { status?: unknown }).status === 'number') throw err
     throw apiError(503, `AI generation failed (${provider}): ${(err as Error).message}`)
   }
 

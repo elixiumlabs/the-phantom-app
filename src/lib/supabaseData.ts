@@ -114,7 +114,7 @@ export async function updateLockIn(projectId: string, data: Partial<Row>) {
   if (error) throw new Error(error.message)
 }
 
-export async function insertOutreachLog(data: Omit<OutreachLog, 'id' | 'created_at'> & { outreach_type?: string; identifier?: string }) {
+export async function insertOutreachLog(data: Omit<OutreachLog, 'id' | 'created_at'> & { user_id: string; outreach_type?: string; identifier?: string }) {
   const { error } = await supabase.from('outreach_log').insert(data)
   if (error) throw new Error(error.message)
 }
@@ -169,4 +169,3 @@ export async function fetchProjects(userId: string): Promise<Project[]> {
   if (error) throw new Error(error.message)
   return (data ?? []) as Project[]
 }
-
