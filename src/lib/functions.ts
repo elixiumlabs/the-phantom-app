@@ -17,7 +17,7 @@ async function call<TIn, TOut>(path: string, data: TIn): Promise<TOut> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }))
-    throw new Error(body?.message ?? `Request failed: ${res.status}`)
+    throw new Error(body?.message ?? body?.error ?? `Request failed: ${res.status}`)
   }
 
   return res.json() as Promise<TOut>
@@ -45,6 +45,9 @@ export const adminGrantPro = (data: { uid?: string; plan?: 'phantom' | 'phantom_
 
 export const deleteProject = (data: { project_id: string }) =>
   call<typeof data, { ok: boolean }>('automations/delete-project', data)
+
+export const deleteAccount = () =>
+  call<Record<string, never>, { ok: boolean }>('automations/delete-account', {})
 
 export const completePhase = (data: { project_id: string; phase: 1 | 2 | 3 | 4 }) =>
   call<typeof data, { ok: boolean; phase: number }>('automations/complete-phase', data)

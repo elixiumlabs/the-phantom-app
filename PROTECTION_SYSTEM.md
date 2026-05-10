@@ -173,13 +173,13 @@ The watermark is invisible but can be extracted to trace content leaks.
 
 ### ⚠️ What This DOESN'T Protect Against:
 - Determined attackers with custom tools
-- Server-side scraping (protected by Firestore rules)
+- Server-side scraping (protected by Supabase RLS and API rate limits)
 - Screenshot tools
 - OCR extraction
 
 ### 🔒 Additional Recommendations:
 1. **Backend rate limiting** (Layer 2 - next priority)
-2. **Request signing** for Cloud Functions
+2. **Request signing** for Vercel API routes
 3. **CORS restrictions** on API endpoints
 4. **Captcha** for suspicious activity
 5. **IP-based blocking** for repeat offenders
@@ -187,8 +187,8 @@ The watermark is invisible but can be extracted to trace content leaks.
 ## Testing Protection
 
 ### To Test in Production:
-1. Deploy: `firebase deploy`
-2. Visit: https://the-phantom-app-io.web.app
+1. Deploy through Vercel
+2. Visit your Vercel production URL
 3. Try:
    - Right-click (should be blocked)
    - F12 (should be blocked)
@@ -229,7 +229,7 @@ useProtection({ disableRightClick: true, monitorCopy: true })
 ## Future Enhancements
 
 ### Recommended Next Steps:
-1. **Backend logging** - Send protection events to Firestore
+1. **Backend logging** - Send protection events to Supabase
 2. **Analytics integration** - Track scraping attempts
 3. **IP blocking** - Auto-ban suspicious IPs
 4. **Captcha integration** - Challenge suspicious users

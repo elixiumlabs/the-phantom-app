@@ -33,8 +33,8 @@ export async function meterUsage(uid: string, key: string, dailyLimit: number): 
     .from('ai_usage')
     .select('id, count')
     .eq('user_id', uid)
-    .eq('date', today)
-    .eq('generator_id', key)
+    .eq('day', today)
+    .eq('generator', key)
     .maybeSingle()
 
   if (error) throw apiError(500, 'Usage meter check failed')
@@ -47,7 +47,7 @@ export async function meterUsage(uid: string, key: string, dailyLimit: number): 
   if (data) {
     await db.from('ai_usage').update({ count: current + 1 }).eq('id', data.id)
   } else {
-    await db.from('ai_usage').insert({ user_id: uid, date: today, generator_id: key, count: 1 })
+    await db.from('ai_usage').insert({ user_id: uid, day: today, generator: key, count: 1 })
   }
 }
 

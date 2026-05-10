@@ -2,74 +2,45 @@
 
 Pre-launch brand validation operating system.
 
-**🎯 STATUS: 100% COMPLETE - READY FOR SALE**
+## Stack
 
-**For buyers:** See [SALE_READY.md](./SALE_READY.md) for complete documentation  
-**For quick pitch:** See [BUYER_PITCH.md](./BUYER_PITCH.md)  
-**For verification:** See [PRE_SALE_CHECKLIST.md](./PRE_SALE_CHECKLIST.md)
+- Frontend: React + TypeScript + Vite + Tailwind
+- Hosting: Vercel
+- API: Vercel Serverless Functions in `api/`
+- Auth, database, realtime, and storage: Supabase
+- Billing: Stripe
+- AI: Gemini/Groq provider routes through the Vercel API
 
-## 🚀 Quick Start
+## Local Development
 
-**New here? Start with:**
-- [FOUNDER_SETUP.md](./FOUNDER_SETUP.md) - Complete setup guide for the founder
-- [QUICKSTART.md](./QUICKSTART.md) - Quick reference for common tasks
+1. Copy `.env.example` to `.env.local`.
+2. Fill in the Supabase, Stripe, and AI provider values.
+3. Run:
 
-## 📋 Setup Checklist
-
-- [ ] Grant yourself lifetime PRO: `grant-founder-access.bat`
-- [ ] Set up Firebase secrets: `firebase functions:secrets:set GEMINI_API_KEY`
-- [ ] Deploy functions: `firebase deploy --only functions`
-- [ ] Test at: https://the-phantom-app-io.web.app
-
-## 🛠️ Helper Scripts
-
-- `grant-founder-access.bat` - Upgrade your account to lifetime PRO
-- `setup-functions.bat` - Set up and deploy functions with secrets
-- `deploy.bat` - Quick deploy to Firebase
-- `dev-local.bat` - Run local development environment
-
-## 📚 Documentation
-
-- [FOUNDER_SETUP.md](./FOUNDER_SETUP.md) - Complete founder setup guide
-- [QUICKSTART.md](./QUICKSTART.md) - Quick reference
-- [FIX_AI_GENERATION.md](./FIX_AI_GENERATION.md) - Troubleshooting AI issues
-- [DEPLOYMENT.md](./DEPLOYMENT.md) - Deployment guide
-
-## 🔧 Development
-
-### Local Development
 ```bash
-dev-local.bat
-```
-Opens:
-- App: http://localhost:5173
-- Emulator UI: http://localhost:4000
-
-### Deploy to Production
-```bash
-firebase deploy
+npm run dev
 ```
 
-## 🎯 Your Account
+The app runs at `http://localhost:5173`.
 
-- **Email**: brandsbyempress@gmail.com
-- **Plan**: PHANTOM PRO (Lifetime)
-- **Admin**: Yes
+## Supabase
 
-## 📦 Tech Stack
+Apply SQL files in order:
 
-- **Frontend**: React + TypeScript + Vite + Tailwind
-- **Backend**: Firebase Functions + Firestore
-- **AI**: Google Gemini API
-- **Auth**: Firebase Auth
-- **Hosting**: Firebase Hosting
+```text
+supabase/01_schema.sql
+supabase/02_rls.sql
+supabase/03_cron.sql
+supabase/04_post_gcp_migration_fixes.sql
+```
 
-## 🐛 Issues?
+The Vercel API requires `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_WEBHOOK_SECRET`.
 
-1. AI not working? → [FIX_AI_GENERATION.md](./FIX_AI_GENERATION.md)
-2. Not PRO? → Run `grant-founder-access.bat`
-3. Functions failing? → Check `firebase functions:log`
+## Production
 
----
+Deploy through Vercel. The active runtime is Supabase + Vercel; Firebase/GCP is no longer part of the app runtime.
 
-**Ready to go?** Run `grant-founder-access.bat` then `deploy.bat`
+```bash
+npm run build
+```
+

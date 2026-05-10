@@ -153,13 +153,11 @@ const SettingsPage = memo(() => {
     setDeleteError('')
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { account_delete_requested_at: new Date().toISOString() },
-      })
-      if (error) throw error
+      const { deleteAccount } = await import('@/lib/functions')
+      await deleteAccount()
       await supabase.auth.signOut()
     } catch (err: any) {
-      setDeleteError(err.message || 'Failed to request account deletion.')
+      setDeleteError(err.message || 'Failed to delete account.')
       setDeleting(false)
     }
   }

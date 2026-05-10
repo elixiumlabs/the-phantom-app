@@ -18,7 +18,7 @@ const PHASE_FEATURES = [
     title: 'Identify',
     subtitle: 'Define your positioning before you build',
     icon: Target,
-    image: 'https://storage.googleapis.com/phantom-app/4K_ultra-wide_cinematic_editorial_photograph_202605030210.jpeg',
+    image: 'https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/4K_ultra-wide_cinematic_editorial_photograph_202605030210.jpeg',
     description: 'Start with clarity. The Identify phase forces you to define who you serve, what you refuse, and your sharpest promise — before you write a single line of code or design a single asset.',
     features: [
       {
@@ -44,7 +44,7 @@ const PHASE_FEATURES = [
     title: 'Test',
     subtitle: 'Build the minimum sellable promise',
     icon: TestTube,
-    image: 'https://storage.googleapis.com/phantom-app/4K_cinematic_ultra-wide_editorial_photograph_202605030219.jpeg',
+    image: 'https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/4K_cinematic_ultra-wide_editorial_photograph_202605030219.jpeg',
     description: 'Build the smallest version of your offer that someone would pay for today. Not an MVP — an MSP. Test it against cold strangers until it converts. No friends, no followers, no goodwill.',
     features: [
       {
@@ -70,7 +70,7 @@ const PHASE_FEATURES = [
     title: 'Iterate',
     subtitle: 'Change one variable at a time',
     icon: RotateCcw,
-    image: 'https://storage.googleapis.com/phantom-app/4K_cinematic_editorial_photograph_in_202605030224.jpeg',
+    image: 'https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/4K_cinematic_editorial_photograph_in_202605030224.jpeg',
     description: 'Run the offer 10-30 times, changing one variable at a time until the results are predictable. Headline, price, audience, delivery — isolate, test, measure, repeat. No guessing.',
     features: [
       {
@@ -96,7 +96,7 @@ const PHASE_FEATURES = [
     title: 'Lock',
     subtitle: 'Freeze the offer and go public',
     icon: Lock,
-    image: 'https://storage.googleapis.com/phantom-app/4K_ultra-wide_cinematic_editorial_photograph_202605030232.jpeg',
+    image: 'https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/4K_ultra-wide_cinematic_editorial_photograph_202605030232.jpeg',
     description: 'Lock in the offer, price, and positioning. Build public assets only after everything is validated. The launch is not the start — it\'s the announcement of a brand that already works.',
     features: [
       {
@@ -124,31 +124,31 @@ const CORE_TOOLS = [
     icon: Database,
     name: 'Proof Vault',
     description: 'Private library of testimonials, case studies, and results collected during the phantom phase. Every transaction generates an artifact. Export and deploy when you launch.',
-    image: 'https://storage.googleapis.com/phantom-app/proofvault.png',
+    image: 'https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/proofvault.png',
   },
   {
     icon: MessageSquare,
     name: 'Signal Tracker',
     description: 'Log every conversation, objection, and conversion. Track what real buyers say, not what followers like. Identify patterns, surface objections, refine messaging.',
-    image: 'https://storage.googleapis.com/phantom-app/signaltracker.png',
+    image: 'https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/signaltracker.png',
   },
   {
     icon: FileText,
     name: 'Template Library',
     description: 'Pre-written cold outreach emails, sales page copy, and positioning frameworks. Conversion-tested, ready to customize. No more staring at a blank page.',
-    image: 'https://storage.googleapis.com/phantom-app/templates.png',
+    image: 'https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/templates.png',
   },
   {
     icon: BarChart3,
     name: 'Validation Dashboard',
     description: 'Real-time metrics on cold conversion rate, repeat rate, and proof collection progress. See exactly where you are in the validation process.',
-    image: 'https://storage.googleapis.com/phantom-app/validation%20dashboard.png',
+    image: 'https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/validation%20dashboard.png',
   },
   {
     icon: Sparkles,
     name: 'AI Brand Assistant',
     description: 'Get instant feedback on positioning, offer clarity, and messaging. Trained on the phantom phase framework to catch weak spots before the market does.',
-    image: 'https://storage.googleapis.com/phantom-app/aiassistant.png',
+    image: 'https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/aiassistant.png',
   },
 ]
 
@@ -220,7 +220,7 @@ const FeaturesPage = memo(() => {
             transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
           >
             <img
-              src="https://storage.googleapis.com/phantom-app/whatareyoubuilding.png"
+              src="https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/whatareyoubuilding.png"
               alt="Phantom Dashboard Preview"
               className="w-full h-full object-cover"
             />

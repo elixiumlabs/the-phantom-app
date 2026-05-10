@@ -77,7 +77,7 @@ const HowItWorksPage = memo(() => {
           <div 
             className="absolute inset-0 bg-cover bg-center bg-no-repeat"
             style={{ 
-              backgroundImage: 'url(https://storage.googleapis.com/phantom-app/4K_ultra-wide_editorial_fashion_photograph_202605031225.jpeg)',
+              backgroundImage: 'url(https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/4K_ultra-wide_editorial_fashion_photograph_202605031225.jpeg)',
               backgroundColor: '#000000'
             }}
           />
@@ -156,7 +156,7 @@ const HowItWorksPage = memo(() => {
                 {/* Left - Image Placeholder */}
                 <div 
                   className="aspect-square rounded-2xl bg-phantom-surface-dark border border-phantom-lime/20 bg-cover bg-center"
-                  style={{ backgroundImage: 'url(https://storage.googleapis.com/phantom-app/4K_ultra-wide_cinematic_editorial_SaaS_202605031303.jpeg)' }}
+                  style={{ backgroundImage: 'url(https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-app/4K_ultra-wide_cinematic_editorial_SaaS_202605031303.jpeg)' }}
                 />
                 
                 {/* Right - Content */}
