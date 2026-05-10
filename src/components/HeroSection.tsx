@@ -13,7 +13,7 @@ const HeroSection = memo(() => (
     {/* Background Image */}
     <div 
       className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-      style={{ backgroundImage: 'url(https://storage.googleapis.com/phantom-app/4K_cinematic_editorial_fashion_photograph_202604291017.jpeg)' }}
+      style={{ backgroundImage: 'url(https://uqkeuojzrnxdyefmyuwz.supabase.co/storage/v1/object/public/phantom-assets/phantom-hero.jpeg)' }}
     />
     <div className="absolute inset-0 bg-gradient-to-b from-phantom-bg/60 via-phantom-bg/80 to-phantom-bg" />
 
