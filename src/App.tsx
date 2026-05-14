@@ -32,6 +32,9 @@ import SignalTrackerPage from '@/pages/app/SignalTrackerPage'
 import TemplatesPage from '@/pages/app/TemplatesPage'
 import ValidationDashboardPage from '@/pages/app/ValidationDashboardPage'
 import AIBrandAssistantPage from '@/pages/app/AIBrandAssistantPage'
+import BrandStudioPage from '@/pages/app/BrandStudioPage'
+import WebsiteGeneratorPage from '@/pages/app/WebsiteGeneratorPage'
+import ContentStudioPage from '@/pages/app/ContentStudioPage'
 import BlogPage from '@/pages/BlogPage'
 import RefundPolicyPage from '@/pages/RefundPolicyPage'
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage'
@@ -158,6 +161,18 @@ const AppRoutes = memo(() => (
 
     <Route path="/assistant" element={
       <RequireAuth><AIBrandAssistantPage /></RequireAuth>
+    } />
+
+    <Route path="/brand-studio" element={
+      <RequireAuth><BrandStudioPage /></RequireAuth>
+    } />
+
+    <Route path="/website-generator" element={
+      <RequireAuth><WebsiteGeneratorPage /></RequireAuth>
+    } />
+
+    <Route path="/content-studio" element={
+      <RequireAuth><ContentStudioPage /></RequireAuth>
     } />
 
     <Route path="/settings" element={

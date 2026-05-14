@@ -1,6 +1,6 @@
 import { memo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Plus, ArrowRight, Trash2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Plus, ArrowRight, Trash2, Palette, Globe2, Megaphone } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects, type Project } from '@/contexts/ProjectContext'
@@ -220,6 +220,7 @@ const DashboardPage = memo(() => {
   useProtection({ disableRightClick: true, monitorCopy: true })
 
   const userProjects = projects.filter(p => p.user_id === user?.id)
+  const readyProjects = userProjects.filter(p => p.ready_to_surface).length
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
@@ -279,6 +280,44 @@ const DashboardPage = memo(() => {
               <p className="font-body text-[11px] text-phantom-text-muted">{sub}</p>
             </div>
           ))}
+        </motion.div>
+
+        <motion.div
+          className="mb-10"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut', delay: 0.08 }}
+        >
+          <div className="flex items-center justify-between gap-4 mb-5">
+            <div>
+              <h2 className="font-display font-bold text-[20px] text-phantom-text-primary">Build & Scale</h2>
+              <p className="font-body text-[13px] text-phantom-text-secondary">
+                {readyProjects > 0
+                  ? `${readyProjects} validated ${readyProjects === 1 ? 'offer is' : 'offers are'} ready to turn into launch assets.`
+                  : 'When an offer passes validation, these studios help you turn it into launch assets.'}
+              </p>
+            </div>
+            <span className={`badge ${readyProjects > 0 ? 'badge-active' : ''}`}>{readyProjects} ready</span>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { label: 'Brand Studio', href: '/brand-studio', icon: Palette, copy: 'Messaging, voice, visual direction, proof cues.' },
+              { label: 'Website Generator', href: '/website-generator', icon: Globe2, copy: 'Launch page structure with a built-in copywriter.' },
+              { label: 'Content Studio', href: '/content-studio', icon: Megaphone, copy: 'Repurpose proof into cross-posted campaign assets.' },
+            ].map(({ label, href, icon: Icon, copy }) => (
+              <Link key={label} to={href} className="card card-interactive no-underline group block">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="h-10 w-10 rounded-xl bg-phantom-lime/10 border border-phantom-lime/30 flex items-center justify-center text-phantom-lime">
+                    <Icon size={17} />
+                  </div>
+                  <ArrowRight size={15} className="text-phantom-text-muted group-hover:text-phantom-lime transition-colors" />
+                </div>
+                <h3 className="font-display font-bold text-[16px] text-phantom-text-primary mb-2">{label}</h3>
+                <p className="font-body text-[13px] text-phantom-text-secondary leading-relaxed">{copy}</p>
+              </Link>
+            ))}
+          </div>
         </motion.div>
 
         <motion.div

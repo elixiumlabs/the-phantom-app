@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Shield, Activity, FileText, Settings, LogOut, BarChart3, Sparkles } from 'lucide-react'
+import { LayoutDashboard, Shield, Activity, FileText, Settings, LogOut, BarChart3, Sparkles, Palette, Globe2, Megaphone } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects } from '@/contexts/ProjectContext'
 
@@ -14,6 +14,12 @@ const NAV_TOOLS = [
   { label: 'Templates',       href: '/templates',  icon: FileText },
   { label: 'Validation Dashboard', href: '/validation', icon: BarChart3 },
   { label: 'AI Brand Assistant',   href: '/assistant',  icon: Sparkles  },
+]
+
+const NAV_SCALE = [
+  { label: 'Brand Studio', href: '/brand-studio', icon: Palette },
+  { label: 'Website Generator', href: '/website-generator', icon: Globe2 },
+  { label: 'Content Studio', href: '/content-studio', icon: Megaphone },
 ]
 
 const NAV_ACCOUNT = [
@@ -89,6 +95,15 @@ const AppSidebar = memo(() => {
           </p>
           <div className="space-y-0.5">
             {NAV_TOOLS.map(item => <NavLink key={item.label} {...item} />)}
+          </div>
+        </div>
+
+        <div>
+          <p className="font-ui text-[10px] text-phantom-text-muted uppercase tracking-wider px-4 mb-1.5">
+            Build & Scale
+          </p>
+          <div className="space-y-0.5">
+            {NAV_SCALE.map(item => <NavLink key={item.label} {...item} />)}
           </div>
         </div>
 
