@@ -1,6 +1,6 @@
 import { memo, useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Eye, EyeOff, Github } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import LiquidBackground from '@/components/LiquidBackground'
@@ -21,6 +21,11 @@ const TESTIMONIALS = [
     attr: 'A.R., Consultant',
   },
 ]
+
+function safeInternalPath(value: string | null): string {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/dashboard'
+  return value
+}
 
 const RotatingTestimonial = memo(() => {
   const [index, setIndex] = useState(0)
@@ -72,8 +77,10 @@ const RotatingTestimonial = memo(() => {
 RotatingTestimonial.displayName = 'RotatingTestimonial'
 
 const AuthPage = memo(({ mode }: AuthPageProps) => {
-  const { login, loginWithGoogle, signup } = useAuth()
+  const { login, loginWithGoogle, loginWithGithub, signup } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirectPath = safeInternalPath(searchParams.get('redirect'))
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -91,11 +98,11 @@ const AuthPage = memo(({ mode }: AuthPageProps) => {
         if (!name.trim()) { setError('Name is required.'); setLoading(false); return }
         await signup(name.trim(), email.trim(), password)
         // RequireAuth will route to /onboarding if onboarding_completed is false.
-        navigate('/dashboard', { replace: true })
+        navigate(redirectPath, { replace: true })
       } else {
         await login(email.trim(), password)
         // RequireAuth will route to /onboarding if onboarding_completed is false.
-        navigate('/dashboard', { replace: true })
+        navigate(redirectPath, { replace: true })
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong.')
@@ -236,26 +243,50 @@ const AuthPage = memo(({ mode }: AuthPageProps) => {
               <div className="flex-1 divider" />
             </div>
 
-            <button
-              className="btn-secondary w-full"
-              type="button"
-              disabled={loading}
-              onClick={async () => {
-                setError('')
-                setLoading(true)
-                try {
-                  await loginWithGoogle()
-                  // RequireAuth will route to /onboarding if onboarding_completed is false.
-        navigate('/dashboard', { replace: true })
-                } catch (err) {
-                  setError(err instanceof Error ? err.message : 'Google sign-in failed.')
-                } finally {
-                  setLoading(false)
-                }
-              }}
-            >
-              Continue with Google
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                className="btn-secondary w-full"
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  setError('')
+                  setLoading(true)
+                  try {
+                    await loginWithGoogle(redirectPath)
+                    // RequireAuth will route to /onboarding if onboarding_completed is false.
+                    navigate(redirectPath, { replace: true })
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Google sign-in failed.')
+                  } finally {
+                    setLoading(false)
+                  }
+                }}
+              >
+                Continue with Google
+              </button>
+
+              <button
+                className="btn-secondary w-full"
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  setError('')
+                  setLoading(true)
+                  try {
+                    await loginWithGithub(redirectPath)
+                    // RequireAuth will route to /onboarding if onboarding_completed is false.
+                    navigate(redirectPath, { replace: true })
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'GitHub sign-in failed.')
+                  } finally {
+                    setLoading(false)
+                  }
+                }}
+              >
+                <Github size={16} aria-hidden="true" />
+                Continue with GitHub
+              </button>
+            </div>
           </div>
 
           <p className="text-center font-body text-[13px] text-phantom-text-muted">

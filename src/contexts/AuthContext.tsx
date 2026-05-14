@@ -27,7 +27,8 @@ interface AuthCtx {
   session: Session | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
-  loginWithGoogle: () => Promise<void>
+  loginWithGoogle: (redirectPath?: string) => Promise<void>
+  loginWithGithub: (redirectPath?: string) => Promise<void>
   signup: (name: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -182,17 +183,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(authErrorMessage(error.message))
   }, [])
 
-  const loginWithGoogle = useCallback(async () => {
+  const signInWithProvider = useCallback(async (provider: 'google' | 'github', redirectPath?: string) => {
     if (!isSupabaseConfigured) throw NOT_CONFIGURED
+    const callbackUrl = new URL('/auth/callback', window.location.origin)
+    if (redirectPath) callbackUrl.searchParams.set('next', redirectPath)
+
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider,
       options: {
-        queryParams: { prompt: 'select_account' },
-        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: provider === 'google' ? { prompt: 'select_account' } : undefined,
+        redirectTo: callbackUrl.toString(),
       },
     })
     if (error) throw new Error(authErrorMessage(error.message))
   }, [])
+
+  const loginWithGoogle = useCallback((redirectPath?: string) => {
+    return signInWithProvider('google', redirectPath)
+  }, [signInWithProvider])
+
+  const loginWithGithub = useCallback((redirectPath?: string) => {
+    return signInWithProvider('github', redirectPath)
+  }, [signInWithProvider])
 
   const logout = useCallback(async () => {
     if (!isSupabaseConfigured) return
@@ -200,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, login, loginWithGoogle, signup, logout }}>
+    <AuthContext.Provider value={{ user, session, loading, login, loginWithGoogle, loginWithGithub, signup, logout }}>
       {children}
     </AuthContext.Provider>
   )

@@ -61,4 +61,77 @@ create policy "proof-vault: owner delete"
 ## Auth
 
 Enable Email auth. Enable Google OAuth in Supabase if Google sign-in should remain available.
+Enable GitHub OAuth in Supabase to support "Continue with GitHub" on the login and signup screens.
 
+### GitHub social login
+
+1. In GitHub, go to Settings > Developer settings > OAuth Apps > New OAuth App.
+2. Use the Phantom production origin as the Homepage URL:
+
+```text
+https://the-phantom-app-empress-projects-0c495ae7.vercel.app
+```
+
+3. Use the Supabase Auth callback URL as the Authorization callback URL:
+
+```text
+https://uqkeuojzrnxdyefmyuwz.supabase.co/auth/v1/callback
+```
+
+4. In Supabase, go to Authentication > Sign In / Providers > GitHub.
+5. Enable GitHub, then paste the GitHub OAuth App Client ID and Client Secret.
+6. In Supabase Authentication > URL Configuration, add the app callback URLs:
+
+```text
+https://the-phantom-app-empress-projects-0c495ae7.vercel.app/auth/callback
+http://localhost:5173/auth/callback
+http://localhost:5174/auth/callback
+```
+
+GitHub social login is separate from the Supabase OAuth 2.1 Server settings below.
+
+For Supabase OAuth 2.1 Server:
+
+1. In Supabase, go to Authentication > URL Configuration.
+2. Set Site URL to the app origin without a trailing slash, for example:
+
+```text
+https://the-phantom-app-empress-projects-0c495ae7.vercel.app
+```
+
+3. Add regular app sign-in redirect URLs:
+
+```text
+https://the-phantom-app-empress-projects-0c495ae7.vercel.app/auth/callback
+http://localhost:5173/auth/callback
+```
+
+4. Go to Authentication > OAuth Server, enable OAuth 2.1 Server, and set Authorization Path to:
+
+```text
+/oauth/consent
+```
+
+This produces the authorization UI at:
+
+```text
+https://the-phantom-app-empress-projects-0c495ae7.vercel.app/oauth/consent
+```
+
+OAuth clients should use these Supabase endpoints:
+
+```text
+Authorization endpoint:
+https://uqkeuojzrnxdyefmyuwz.supabase.co/auth/v1/oauth/authorize
+
+Token endpoint:
+https://uqkeuojzrnxdyefmyuwz.supabase.co/auth/v1/oauth/token
+
+JWKS endpoint:
+https://uqkeuojzrnxdyefmyuwz.supabase.co/auth/v1/.well-known/jwks.json
+
+OIDC discovery:
+https://uqkeuojzrnxdyefmyuwz.supabase.co/auth/v1/.well-known/openid-configuration
+```
+
+Avoid configuring the Site URL with a trailing slash, otherwise Supabase may build a double-slash URL like `//oauth/consent`.

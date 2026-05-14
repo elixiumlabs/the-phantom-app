@@ -48,6 +48,7 @@ import AffiliatesPage from '@/pages/AffiliatesPage'
 import DiagnosticPage from '@/pages/DiagnosticPage'
 import IntegrationsHelpPage from '@/pages/IntegrationsHelpPage'
 import AuthCallbackPage from '@/pages/AuthCallbackPage'
+import OAuthConsentPage from '@/pages/OAuthConsentPage'
 
 const LandingPage = memo(() => (
   <div className="relative min-h-screen">
@@ -109,8 +110,16 @@ function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-const AppRoutes = memo(() => (
-  <Routes>
+const AppRoutes = memo(() => {
+  const location = useLocation()
+
+  if (location.pathname.includes('//')) {
+    const normalizedPath = location.pathname.replace(/\/{2,}/g, '/')
+    return <Navigate to={`${normalizedPath}${location.search}${location.hash}`} replace />
+  }
+
+  return (
+    <Routes>
     <Route path="/" element={<LandingPage />} />
 
     <Route path="/login" element={
@@ -120,6 +129,7 @@ const AppRoutes = memo(() => (
       <RedirectIfAuthed><AuthPage mode="signup" /></RedirectIfAuthed>
     } />
     <Route path="/auth/callback" element={<AuthCallbackPage />} />
+    <Route path="/oauth/consent" element={<OAuthConsentPage />} />
 
     <Route path="/onboarding" element={
       <RequireOnboarding><OnboardingPage /></RequireOnboarding>
@@ -193,8 +203,9 @@ const AppRoutes = memo(() => (
     <Route path="/help/integrations" element={<IntegrationsHelpPage />} />
 
     <Route path="*" element={<Navigate to="/" replace />} />
-  </Routes>
-))
+    </Routes>
+  )
+})
 AppRoutes.displayName = 'AppRoutes'
 
 const App = memo(() => (
