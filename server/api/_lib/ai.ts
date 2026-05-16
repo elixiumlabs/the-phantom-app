@@ -7,12 +7,14 @@ export type Provider =
   | 'groq_fast'
   | 'qwen'
   | 'groq_compound'
+  | 'openrouter'
 
 const GEMINI_MODEL = 'gemini-1.5-flash'
 const GROQ_MODEL = 'llama-3.3-70b-versatile'
 const GROQ_FAST_MODEL = 'llama-3.1-8b-instant'
 const QWEN_MODEL = 'qwen/qwen3-32b'
 const GROQ_COMPOUND_MODEL = 'groq/compound'
+const DEFAULT_OPENROUTER_MODEL = 'openrouter/auto'
 
 export const PHANTOM_SYSTEM = `You are Phantom — the private operating system for pre-launch brand validation.
 You execute the four-phase Phantom methodology: Ghost Identity, Silent Test, Iteration Loop, Lock In.
@@ -37,6 +39,8 @@ export async function generateJSON<T>(opts: JsonCallOpts): Promise<T> {
   try {
     if (provider === 'gemini') {
       raw = await callGemini({ user: opts.user, system, maxTokens, temperature })
+    } else if (provider === 'openrouter') {
+      raw = await callOpenRouter({ user: opts.user, system, maxTokens, temperature })
     } else {
       const model =
         provider === 'groq' ? GROQ_MODEL :
@@ -99,13 +103,41 @@ async function callGroq(args: { user: string; system: string; maxTokens: number;
   return data.choices?.[0]?.message?.content ?? ''
 }
 
+async function callOpenRouter(args: { user: string; system: string; maxTokens: number; temperature: number }): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) throw apiError(503, 'OPENROUTER_API_KEY not configured')
+  const model = process.env.OPENROUTER_MODEL || DEFAULT_OPENROUTER_MODEL
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.OPENROUTER_SITE_URL || 'https://thephantom.app',
+      'X-OpenRouter-Title': process.env.OPENROUTER_APP_TITLE || 'Phantom',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'system', content: args.system }, { role: 'user', content: args.user }],
+      temperature: args.temperature,
+      max_tokens: args.maxTokens,
+      response_format: { type: 'json_object' },
+    }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`OpenRouter HTTP ${res.status}: ${body.slice(0, 400)}`)
+  }
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> }
+  return data.choices?.[0]?.message?.content ?? ''
+}
+
 export async function getUserProvider(uid: string): Promise<Provider> {
   try {
     const { adminClient } = await import('./supabase')
     const db = adminClient()
     const { data } = await db.from('users').select('llm_provider').eq('id', uid).single()
     const v = data?.llm_provider
-    if (v === 'gemini' || v === 'groq' || v === 'groq_fast' || v === 'qwen' || v === 'groq_compound') return v
+    if (v === 'gemini' || v === 'groq' || v === 'groq_fast' || v === 'qwen' || v === 'groq_compound' || v === 'openrouter') return v
   } catch { /* ignore */ }
   return 'gemini'
 }

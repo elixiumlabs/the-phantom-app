@@ -15,7 +15,7 @@ create extension if not exists "pg_net";          -- HTTP calls from pg_cron
 -- ---------------------------------------------------------------------------
 create type plan_type as enum ('free', 'phantom', 'phantom_pro');
 create type project_status as enum ('active', 'archived', 'surfaced');
-create type llm_provider_type as enum ('gemini', 'groq', 'groq_fast', 'qwen', 'groq_compound');
+create type llm_provider_type as enum ('gemini', 'groq', 'groq_fast', 'qwen', 'groq_compound', 'openrouter');
 create type subscription_status_type as enum ('active', 'trialing', 'past_due', 'canceled', 'unpaid', 'incomplete');
 
 -- =============================================================================

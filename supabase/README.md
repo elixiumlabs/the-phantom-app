@@ -8,6 +8,7 @@ Run these SQL files in order in the Supabase SQL Editor.
 | `02_rls.sql` | Enables row level security and owner policies |
 | `03_cron.sql` | Schedules Vercel cron-backed jobs |
 | `04_post_gcp_migration_fixes.sql` | Adds post-migration columns, webhook keys, summaries, and compatibility triggers |
+| `05_openrouter_llm_provider.sql` | Adds OpenRouter to the LLM provider enum |
 
 ## Environment
 
@@ -17,7 +18,7 @@ Vercel needs:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_WEBHOOK_SECRET`
 - `CRON_SECRET`
-- AI provider keys such as `GEMINI_API_KEY` and `GROQ_API_KEY`
+- AI provider keys such as `GEMINI_API_KEY`, `GROQ_API_KEY`, and `OPENROUTER_API_KEY`
 - Stripe keys and webhook secret
 
 The Vite frontend needs:

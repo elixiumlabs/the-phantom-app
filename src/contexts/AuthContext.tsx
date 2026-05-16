@@ -7,7 +7,7 @@ const NOT_CONFIGURED = new Error(
 )
 
 export type Plan = 'free' | 'phantom' | 'phantom_pro'
-export type LLMProvider = 'gemini' | 'groq' | 'groq_fast' | 'qwen' | 'groq_compound'
+export type LLMProvider = 'gemini' | 'groq' | 'groq_fast' | 'qwen' | 'groq_compound' | 'openrouter'
 
 export interface User {
   id: string
@@ -54,7 +54,8 @@ function shapeUser(supaUser: SupabaseUser, profile: Record<string, unknown> | nu
     rawProvider === 'groq' ||
     rawProvider === 'groq_fast' ||
     rawProvider === 'qwen' ||
-    rawProvider === 'groq_compound'
+    rawProvider === 'groq_compound' ||
+    rawProvider === 'openrouter'
       ? rawProvider
       : 'gemini'
 

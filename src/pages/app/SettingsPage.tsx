@@ -12,6 +12,7 @@ const LLM_OPTIONS: Array<{ value: LLMProvider; label: string; sub: string }> = [
   { value: 'groq_fast',      label: 'Llama 3.1 8B Fast', sub: 'via Groq · cheapest, fastest' },
   { value: 'qwen',           label: 'Qwen3 32B',         sub: 'via Groq · strong reasoning' },
   { value: 'groq_compound',  label: 'Groq Compound',     sub: 'via Groq · agentic w/ tools' },
+  { value: 'openrouter',     label: 'OpenRouter',        sub: 'openrouter/auto - routed model selection' },
 ]
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
