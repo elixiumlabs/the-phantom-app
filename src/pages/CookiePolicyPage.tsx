@@ -176,7 +176,7 @@ const CookiePolicyPage = memo(() => {
                 </li>
                 <li className="font-body text-[15px] text-phantom-text-secondary leading-relaxed pl-6 relative">
                   <span className="absolute left-0 top-[10px] w-2 h-2 rounded-full bg-phantom-lime/70" />
-                  <span className="font-medium text-phantom-text-primary">Authentication Providers:</span> For social login (Google, GitHub)
+                  <span className="font-medium text-phantom-text-primary">Authentication Providers:</span> For social login (GitHub, Discord)
                 </li>
                 <li className="font-body text-[15px] text-phantom-text-secondary leading-relaxed pl-6 relative">
                   <span className="absolute left-0 top-[10px] w-2 h-2 rounded-full bg-phantom-lime/70" />

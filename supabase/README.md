@@ -61,8 +61,7 @@ create policy "proof-vault: owner delete"
 
 ## Auth
 
-Enable Email auth. Enable Google OAuth in Supabase if Google sign-in should remain available.
-Enable GitHub OAuth in Supabase to support "Continue with GitHub" on the login and signup screens.
+Enable Email auth. Enable GitHub and Discord OAuth in Supabase to support the social login buttons on the login and signup screens.
 
 ### GitHub social login
 
@@ -90,6 +89,19 @@ http://localhost:5174/auth/callback
 ```
 
 GitHub social login is separate from the Supabase OAuth 2.1 Server settings below.
+
+### Discord social login
+
+1. In Discord, go to the Developer Portal and create an application.
+2. Add this redirect URL to the Discord OAuth2 settings:
+
+```text
+https://uqkeuojzrnxdyefmyuwz.supabase.co/auth/v1/callback
+```
+
+3. In Supabase, go to Authentication > Sign In / Providers > Discord.
+4. Enable Discord, then paste the Discord Client ID and Client Secret.
+5. Keep the same Supabase redirect URLs listed above for the app callback.
 
 For Supabase OAuth 2.1 Server:
 

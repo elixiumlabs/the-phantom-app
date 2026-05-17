@@ -97,7 +97,7 @@ const PrivacyPolicyPage = memo(() => {
                 Information from Third Parties
               </h3>
               <p className="font-body text-[15px] text-phantom-text-secondary leading-relaxed">
-                We may receive information from third-party services you connect to Phantom, such as authentication providers (Google, GitHub) or payment processors (Stripe). We only collect the minimum information necessary to provide our services.
+                We may receive information from third-party services you connect to Phantom, such as authentication providers (GitHub, Discord) or payment processors (Stripe). We only collect the minimum information necessary to provide our services.
               </p>
             </section>
 
