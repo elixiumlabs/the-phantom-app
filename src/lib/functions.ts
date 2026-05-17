@@ -2,17 +2,16 @@ import { supabase } from './supabase'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
-async function call<TIn, TOut>(path: string, data: TIn): Promise<TOut> {
+async function apiRequest<TOut>(path: string, init: RequestInit): Promise<TOut> {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
+  const headers = new Headers(init.headers)
+  headers.set('Content-Type', 'application/json')
+  if (token) headers.set('Authorization', `Bearer ${token}`)
 
   const res = await fetch(`${API_BASE}/api/${path}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(data),
+    ...init,
+    headers,
   })
 
   if (!res.ok) {
@@ -21,6 +20,42 @@ async function call<TIn, TOut>(path: string, data: TIn): Promise<TOut> {
   }
 
   return res.json() as Promise<TOut>
+}
+
+async function call<TIn, TOut>(path: string, data: TIn): Promise<TOut> {
+  return apiRequest<TOut>(path, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+async function get<TOut>(path: string): Promise<TOut> {
+  return apiRequest<TOut>(path, { method: 'GET' })
+}
+
+export interface AdminOnboardingResponse {
+  id: string
+  user_id: string
+  project_id: string | null
+  what_building: string
+  user_type: 'solo_founder' | 'creator' | 'coach_consultant' | 'agency' | 'other'
+  built_in_public: 'yes' | 'no' | 'currently'
+  history_note: string | null
+  refined_problem: string | null
+  suggested_name: string | null
+  created_at: string
+  users: {
+    email: string
+    full_name: string | null
+    plan: 'free' | 'phantom' | 'phantom_pro'
+    onboarding_completed: boolean
+    created_at: string
+  } | null
+  projects: {
+    name: string
+    status: string
+    current_phase: number
+  } | null
 }
 
 // ========================================
@@ -42,6 +77,9 @@ export const skipOnboarding = () =>
 
 export const adminGrantPro = (data: { uid?: string; plan?: 'phantom' | 'phantom_pro' }) =>
   call<typeof data, { ok: true; uid: string; plan: string }>('automations/admin-grant', data)
+
+export const getAdminOnboardingResponses = () =>
+  get<{ responses: AdminOnboardingResponse[] }>('admin/onboarding-responses')
 
 export const deleteProject = (data: { project_id: string }) =>
   call<typeof data, { ok: boolean }>('automations/delete-project', data)

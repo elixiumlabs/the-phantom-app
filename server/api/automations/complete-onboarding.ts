@@ -16,6 +16,35 @@ const Input = z.object({
 
 interface RefinedSeed { refined_problem: string; suggested_name: string }
 
+const AI_SEED_TIMEOUT_MS = 8000
+
+function fallbackSeed(whatBuilding: string): RefinedSeed {
+  return {
+    refined_problem: whatBuilding,
+    suggested_name: whatBuilding.slice(0, 40).split(' ').slice(0, 3).join(' '),
+  }
+}
+
+function onboardingMeta(input: z.infer<typeof Input>, seed?: RefinedSeed) {
+  return {
+    what_building: input.what_building,
+    user_type: input.user_type,
+    built_in_public: input.built_in_public,
+    history_note: input.history_note ?? null,
+    refined_problem: seed?.refined_problem ?? null,
+    suggested_name: seed?.suggested_name ?? null,
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)
+    }),
+  ])
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   try {
@@ -52,13 +81,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (existingProjects?.length) {
       const existingId = existingProjects[0].id
-      if (!userRow?.onboarding_completed) {
-        await db.from('users').update({
-          onboarding_completed: true,
-          onboarding_meta: { user_type: input.user_type, built_in_public: input.built_in_public },
-          updated_at: new Date().toISOString(),
-        }).eq('id', uid)
-      }
+      await db.from('users').update({
+        onboarding_completed: true,
+        onboarding_meta: onboardingMeta(input),
+        updated_at: new Date().toISOString(),
+      }).eq('id', uid)
+      await db.from('onboarding_responses').upsert({
+        user_id: uid,
+        project_id: existingId,
+        what_building: input.what_building,
+        user_type: input.user_type,
+        built_in_public: input.built_in_public,
+        history_note: input.history_note ?? null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
       return res.status(200).json({ project_id: existingId })
     }
 
@@ -66,8 +102,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let seed: RefinedSeed
     try {
-      seed = await generateJSON<RefinedSeed>({
-        user: `A new user just finished Phantom onboarding. Refine their seed into a starting point for Phase 01.
+      seed = await withTimeout(
+        generateJSON<RefinedSeed>({
+          user: `A new user just finished Phantom onboarding. Refine their seed into a starting point for Phase 01.
 
 What they're building: """${input.what_building}"""
 They identify as: ${input.user_type}
@@ -76,14 +113,13 @@ Have they built in public before? ${input.built_in_public}${input.history_note ?
 Return JSON: { "refined_problem": string, "suggested_name": string }
 - refined_problem: A first-pass problem statement in Phantom format ("I help [X] who is experiencing [Y] to achieve [Z] without [W]"). Use their words where possible.
 - suggested_name: A short functional working name for the test. 1-3 words.`,
-        maxTokens: 600,
-        temperature: 0.6,
-      })
+          maxTokens: 600,
+          temperature: 0.6,
+        }),
+        AI_SEED_TIMEOUT_MS,
+      )
     } catch {
-      seed = {
-        refined_problem: input.what_building,
-        suggested_name: input.what_building.slice(0, 40).split(' ').slice(0, 3).join(' '),
-      }
+      seed = fallbackSeed(input.what_building)
     }
 
     const now = new Date().toISOString()
@@ -166,9 +202,21 @@ Return JSON: { "refined_problem": string, "suggested_name": string }
       }),
       db.from('users').update({
         onboarding_completed: true,
-        onboarding_meta: { user_type: input.user_type, built_in_public: input.built_in_public },
+        onboarding_meta: onboardingMeta(input, seed),
         updated_at: now,
       }).eq('id', uid),
+      db.from('onboarding_responses').upsert({
+        user_id: uid,
+        project_id: projectId,
+        what_building: input.what_building,
+        user_type: input.user_type,
+        built_in_public: input.built_in_public,
+        history_note: input.history_note ?? null,
+        refined_problem: seed.refined_problem,
+        suggested_name: seed.suggested_name,
+        created_at: now,
+        updated_at: now,
+      }, { onConflict: 'user_id' }),
     ])
 
     try {

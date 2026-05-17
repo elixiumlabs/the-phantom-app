@@ -35,6 +35,7 @@ import AIBrandAssistantPage from '@/pages/app/AIBrandAssistantPage'
 import BrandStudioPage from '@/pages/app/BrandStudioPage'
 import WebsiteGeneratorPage from '@/pages/app/WebsiteGeneratorPage'
 import ContentStudioPage from '@/pages/app/ContentStudioPage'
+import AdminOnboardingPage from '@/pages/app/AdminOnboardingPage'
 import BlogPage from '@/pages/BlogPage'
 import RefundPolicyPage from '@/pages/RefundPolicyPage'
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage'
@@ -187,6 +188,10 @@ const AppRoutes = memo(() => {
 
     <Route path="/settings" element={
       <RequireAuth><SettingsPage /></RequireAuth>
+    } />
+
+    <Route path="/admin/onboarding" element={
+      <RequireAuth><AdminOnboardingPage /></RequireAuth>
     } />
 
     <Route path="/blog" element={<BlogPage />} />

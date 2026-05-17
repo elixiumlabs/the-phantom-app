@@ -3,6 +3,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 type Handler = (req: VercelRequest, res: VercelResponse) => unknown | Promise<unknown>
 
 const routes: Record<string, () => Promise<{ default: Handler }>> = {
+  'admin/onboarding-responses': () => import('../server/api/admin/onboarding-responses'),
   'automations/admin-grant': () => import('../server/api/automations/admin-grant'),
   'automations/bootstrap-user': () => import('../server/api/automations/bootstrap-user'),
   'automations/complete-onboarding': () => import('../server/api/automations/complete-onboarding'),
@@ -50,4 +51,3 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const mod = await load()
   return mod.default(req, res)
 }
-

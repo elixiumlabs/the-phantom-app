@@ -17,6 +17,7 @@ export interface User {
   plan: Plan
   llmProvider: LLMProvider
   onboardingCompleted: boolean
+  isAdmin: boolean
   stripeCustomerId?: string
   stripeSubscriptionId?: string
   createdAt: string
@@ -30,6 +31,7 @@ interface AuthCtx {
   loginWithGithub: (redirectPath?: string) => Promise<void>
   loginWithDiscord: (redirectPath?: string) => Promise<void>
   signup: (name: string, email: string, password: string) => Promise<void>
+  refreshProfile: () => Promise<User | null>
   logout: () => Promise<void>
 }
 
@@ -74,6 +76,7 @@ function shapeUser(supaUser: SupabaseUser, profile: Record<string, unknown> | nu
     plan: (profile?.plan as Plan | undefined) ?? 'free',
     llmProvider,
     onboardingCompleted: Boolean(profile?.onboarding_completed),
+    isAdmin: Boolean(profile?.is_admin),
     stripeCustomerId: profile?.stripe_customer_id as string | undefined,
     stripeSubscriptionId: profile?.stripe_subscription_id as string | undefined,
     createdAt: (profile?.created_at as string | undefined) ?? new Date().toISOString(),
@@ -85,6 +88,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const refreshProfile = useCallback(async (): Promise<User | null> => {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const currentSession = sessionData.session
+    setSession(currentSession)
+
+    if (!currentSession) {
+      setUser(null)
+      setLoading(false)
+      return null
+    }
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', currentSession.user.id)
+      .single()
+
+    const nextUser = shapeUser(currentSession.user, profile)
+    setUser(nextUser)
+    setLoading(false)
+    return nextUser
+  }, [])
+
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setLoading(false)
@@ -92,13 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Load the initial session from local storage synchronously.
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      if (!data.session) {
-        setUser(null)
-        setLoading(false)
-      }
-    })
+    void refreshProfile()
 
     // Subscribe to auth state changes.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
@@ -123,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [refreshProfile])
 
   // Re-fetch profile whenever session changes so plan updates propagate.
   useEffect(() => {
@@ -212,7 +232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, login, loginWithGithub, loginWithDiscord, signup, logout }}>
+    <AuthContext.Provider value={{ user, session, loading, login, loginWithGithub, loginWithDiscord, signup, refreshProfile, logout }}>
       {children}
     </AuthContext.Provider>
   )

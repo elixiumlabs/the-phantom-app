@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Shield, Activity, FileText, Settings, LogOut, BarChart3, Sparkles, Palette, Globe2, Megaphone } from 'lucide-react'
+import { LayoutDashboard, Shield, Activity, FileText, Settings, LogOut, BarChart3, Sparkles, Palette, Globe2, Megaphone, ClipboardList } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProjects } from '@/contexts/ProjectContext'
 
@@ -24,6 +24,10 @@ const NAV_SCALE = [
 
 const NAV_ACCOUNT = [
   { label: 'Settings', href: '/settings', icon: Settings },
+]
+
+const NAV_ADMIN = [
+  { label: 'Customer Onboarding', href: '/admin/onboarding', icon: ClipboardList },
 ]
 
 const FREE_LIMITS = {
@@ -111,6 +115,17 @@ const AppSidebar = memo(() => {
         <div className="space-y-0.5">
           {NAV_ACCOUNT.map(item => <NavLink key={item.label} {...item} />)}
         </div>
+
+        {user?.isAdmin && (
+          <div>
+            <p className="font-ui text-[10px] text-phantom-text-muted uppercase tracking-wider px-4 mb-1.5">
+              Admin
+            </p>
+            <div className="space-y-0.5">
+              {NAV_ADMIN.map(item => <NavLink key={item.label} {...item} />)}
+            </div>
+          </div>
+        )}
 
       </nav>
 

@@ -9,6 +9,7 @@ Run these SQL files in order in the Supabase SQL Editor.
 | `03_cron.sql` | Schedules Vercel cron-backed jobs |
 | `04_post_gcp_migration_fixes.sql` | Adds post-migration columns, webhook keys, summaries, and compatibility triggers |
 | `05_openrouter_llm_provider.sql` | Adds OpenRouter to the LLM provider enum |
+| `06_onboarding_responses.sql` | Stores structured onboarding/customer intake for admin review |
 
 ## Environment
 

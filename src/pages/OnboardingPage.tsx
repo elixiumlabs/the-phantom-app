@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react'
+import { memo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Loader, AlertTriangle } from 'lucide-react'
@@ -24,7 +24,7 @@ const BUILT_OPTIONS: Array<{ value: BuiltInPublic; label: string }> = [
 ]
 
 const OnboardingPage = memo(() => {
-  const { user } = useAuth()
+  const { user, refreshProfile } = useAuth()
   const navigate = useNavigate()
 
   const [step, setStep] = useState<1 | 2 | 3>(1)
@@ -34,18 +34,6 @@ const OnboardingPage = memo(() => {
   const [historyNote, setHistoryNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [pendingDestination, setPendingDestination] = useState<string | null>(null)
-
-  // The server flips onboarding_completed via Supabase. RequireAuth reads
-  // that flag and bounces back to /onboarding if it's still false at the
-  // moment we navigate. So: once we've kicked off the call, wait for the
-  // live AuthContext snapshot to show onboarding_completed=true before
-  // routing into the gated app.
-  useEffect(() => {
-    if (pendingDestination && user?.onboardingCompleted) {
-      navigate(pendingDestination, { replace: true })
-    }
-  }, [pendingDestination, user?.onboardingCompleted, navigate])
 
   const canProceed = (): boolean => {
     if (step === 1) return whatBuilding.trim().length >= 3
@@ -65,13 +53,15 @@ const OnboardingPage = memo(() => {
         built_in_public: builtInPublic,
         history_note: historyNote.trim() || undefined,
       })
-      setPendingDestination(`/project/${project_id}/identify`)
+      await refreshProfile()
+      navigate(`/project/${project_id}/identify`, { replace: true })
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Could not finish onboarding.'
       // Idempotent recovery: if onboarding was already completed (e.g. from a
       // previous attempt), just send them to dashboard without showing an error
       if (/onboarding already completed/i.test(msg) || /already has a project/i.test(msg)) {
-        setPendingDestination('/dashboard')
+        await refreshProfile()
+        navigate('/dashboard', { replace: true })
         return
       }
       setError(msg)
@@ -94,7 +84,8 @@ const OnboardingPage = memo(() => {
     setError(null)
     try {
       await skipOnboarding()
-      setPendingDestination('/dashboard')
+      await refreshProfile()
+      navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not skip onboarding.')
       setSubmitting(false)
