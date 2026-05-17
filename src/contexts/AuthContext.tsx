@@ -6,6 +6,8 @@ const NOT_CONFIGURED = new Error(
   'Auth is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local and restart.',
 )
 
+const AUTH_REFRESH_TIMEOUT_MS = 5000
+
 export type Plan = 'free' | 'phantom' | 'phantom_pro'
 export type LLMProvider = 'gemini' | 'groq' | 'groq_fast' | 'qwen' | 'groq_compound' | 'openrouter'
 
@@ -83,6 +85,15 @@ function shapeUser(supaUser: SupabaseUser, profile: Record<string, unknown> | nu
   }
 }
 
+async function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)
+    }),
+  ])
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
@@ -90,7 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = useCallback(async (): Promise<User | null> => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
+      const { data: sessionData } = await withTimeout(
+        supabase.auth.getSession(),
+        AUTH_REFRESH_TIMEOUT_MS,
+      )
       const currentSession = sessionData.session
       setSession(currentSession)
 
@@ -100,13 +114,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null
       }
 
-      const { data: profile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', currentSession.user.id)
-        .single()
+      const profileResult = await withTimeout(
+        Promise.resolve(supabase
+          .from('users')
+          .select('*')
+          .eq('id', currentSession.user.id)
+          .single()),
+        AUTH_REFRESH_TIMEOUT_MS,
+      )
 
-      const nextUser = shapeUser(currentSession.user, profile)
+      const nextUser = shapeUser(currentSession.user, profileResult.data)
       setUser(nextUser)
       setLoading(false)
       return nextUser
