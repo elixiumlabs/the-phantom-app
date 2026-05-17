@@ -45,6 +45,27 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ])
 }
 
+async function writeOnboardingResponse(
+  db: ReturnType<typeof adminClient>,
+  data: {
+    user_id: string
+    project_id: string
+    what_building: string
+    user_type: z.infer<typeof Input>['user_type']
+    built_in_public: z.infer<typeof Input>['built_in_public']
+    history_note?: string | null
+    refined_problem?: string | null
+    suggested_name?: string | null
+    created_at?: string
+    updated_at: string
+  },
+): Promise<void> {
+  const { error } = await db.from('onboarding_responses').upsert(data, { onConflict: 'user_id' })
+  if (error) {
+    console.warn('[phantom] onboarding response was not saved:', error.message)
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   try {
@@ -81,12 +102,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (existingProjects?.length) {
       const existingId = existingProjects[0].id
-      await db.from('users').update({
+      const { error: userUpdateError } = await db.from('users').update({
         onboarding_completed: true,
         onboarding_meta: onboardingMeta(input),
         updated_at: new Date().toISOString(),
       }).eq('id', uid)
-      await db.from('onboarding_responses').upsert({
+      if (userUpdateError) throw apiError(500, userUpdateError.message)
+
+      await writeOnboardingResponse(db, {
         user_id: uid,
         project_id: existingId,
         what_building: input.what_building,
@@ -94,7 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         built_in_public: input.built_in_public,
         history_note: input.history_note ?? null,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
+      })
       return res.status(200).json({ project_id: existingId })
     }
 
@@ -144,7 +167,13 @@ Return JSON: { "refined_problem": string, "suggested_name": string }
     if (projError || !project) throw apiError(500, 'Failed to create project')
     const projectId = project.id
 
-    await Promise.all([
+    const [
+      ghostIdentityResult,
+      silentTestResult,
+      iterationLoopResult,
+      lockInResult,
+      userUpdateResult,
+    ] = await Promise.all([
       db.from('ghost_identity').insert({
         project_id: projectId,
         problem_statement: seed.refined_problem,
@@ -205,19 +234,32 @@ Return JSON: { "refined_problem": string, "suggested_name": string }
         onboarding_meta: onboardingMeta(input, seed),
         updated_at: now,
       }).eq('id', uid),
-      db.from('onboarding_responses').upsert({
-        user_id: uid,
-        project_id: projectId,
-        what_building: input.what_building,
-        user_type: input.user_type,
-        built_in_public: input.built_in_public,
-        history_note: input.history_note ?? null,
-        refined_problem: seed.refined_problem,
-        suggested_name: seed.suggested_name,
-        created_at: now,
-        updated_at: now,
-      }, { onConflict: 'user_id' }),
     ])
+
+    const requiredErrors = [
+      ghostIdentityResult.error,
+      silentTestResult.error,
+      iterationLoopResult.error,
+      lockInResult.error,
+      userUpdateResult.error,
+    ].filter(Boolean)
+
+    if (requiredErrors.length > 0) {
+      throw apiError(500, requiredErrors[0]?.message ?? 'Failed to complete onboarding')
+    }
+
+    await writeOnboardingResponse(db, {
+      user_id: uid,
+      project_id: projectId,
+      what_building: input.what_building,
+      user_type: input.user_type,
+      built_in_public: input.built_in_public,
+      history_note: input.history_note ?? null,
+      refined_problem: seed.refined_problem,
+      suggested_name: seed.suggested_name,
+      created_at: now,
+      updated_at: now,
+    })
 
     try {
       await logActivity({ user_id: uid, project_id: projectId, action: 'project_created', metadata: { source: 'onboarding' } })

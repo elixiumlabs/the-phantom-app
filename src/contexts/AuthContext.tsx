@@ -89,26 +89,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const refreshProfile = useCallback(async (): Promise<User | null> => {
-    const { data: sessionData } = await supabase.auth.getSession()
-    const currentSession = sessionData.session
-    setSession(currentSession)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const currentSession = sessionData.session
+      setSession(currentSession)
 
-    if (!currentSession) {
+      if (!currentSession) {
+        setUser(null)
+        setLoading(false)
+        return null
+      }
+
+      const { data: profile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', currentSession.user.id)
+        .single()
+
+      const nextUser = shapeUser(currentSession.user, profile)
+      setUser(nextUser)
+      setLoading(false)
+      return nextUser
+    } catch (err) {
+      console.error('[phantom] failed to refresh auth profile:', err)
       setUser(null)
       setLoading(false)
       return null
     }
-
-    const { data: profile } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', currentSession.user.id)
-      .single()
-
-    const nextUser = shapeUser(currentSession.user, profile)
-    setUser(nextUser)
-    setLoading(false)
-    return nextUser
   }, [])
 
   useEffect(() => {

@@ -103,7 +103,11 @@ function RequireOnboarding({ children }: { children: React.ReactNode }) {
 
 function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
-  if (loading) return null
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <span className="label text-phantom-lime">Loading...</span>
+    </div>
+  )
   if (user) {
     // Send straight into onboarding if they haven't done it yet.
     return <Navigate to={user.onboardingCompleted ? '/dashboard' : '/onboarding'} replace />
