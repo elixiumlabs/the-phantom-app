@@ -5,6 +5,8 @@ dist
 .env.*.local
 .firebase
 .vercel
+.refact
+vite.config.ts.timestamp-*.mjs
 
 # Local test scripts containing secrets — never commit
 functions/test-*.js

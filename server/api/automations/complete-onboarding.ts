@@ -18,6 +18,24 @@ interface RefinedSeed { refined_problem: string; suggested_name: string }
 
 const AI_SEED_TIMEOUT_MS = 8000
 
+function isMissingSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const maybe = error as { code?: string; message?: string }
+  return maybe.code === 'PGRST205' || /Could not find the table/i.test(maybe.message ?? '')
+}
+
+function schemaError(error: unknown): never {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'object' && error && 'message' in error
+      ? String((error as { message: unknown }).message)
+      : 'Supabase schema is missing.'
+  throw apiError(
+    500,
+    `${message} Run the SQL files in supabase/README.md against this Supabase project.`,
+  )
+}
+
 function fallbackSeed(whatBuilding: string): RefinedSeed {
   return {
     refined_problem: whatBuilding,
@@ -75,13 +93,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const input = parsed.data
 
     const db = adminClient()
-    const { data: userRow } = await db.from('users').select('*').eq('id', uid).single()
+    const { data: userRow, error: userRowError } = await db.from('users').select('*').eq('id', uid).single()
+    if (isMissingSchemaError(userRowError)) schemaError(userRowError)
 
     // Self-heal: ensure user row exists
     if (!userRow) {
       const { data: authUser } = await db.auth.admin.getUserById(uid)
       const now = new Date().toISOString()
-      await db.from('users').insert({
+      const { error: insertUserError } = await db.from('users').insert({
         id: uid,
         email: authUser.user?.email ?? null,
         full_name: authUser.user?.user_metadata?.full_name ?? null,
@@ -90,15 +109,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         created_at: now,
         updated_at: now,
       })
+      if (isMissingSchemaError(insertUserError)) schemaError(insertUserError)
+      if (insertUserError) throw apiError(500, insertUserError.message)
     }
 
     // Idempotency: if project already exists, return it
-    const { data: existingProjects } = await db
+    const { data: existingProjects, error: existingProjectsError } = await db
       .from('projects')
       .select('id')
       .eq('user_id', uid)
       .eq('status', 'active')
       .limit(1)
+    if (isMissingSchemaError(existingProjectsError)) schemaError(existingProjectsError)
+    if (existingProjectsError) throw apiError(500, existingProjectsError.message)
 
     if (existingProjects?.length) {
       const existingId = existingProjects[0].id
@@ -164,7 +187,8 @@ Return JSON: { "refined_problem": string, "suggested_name": string }
       .select('id')
       .single()
 
-    if (projError || !project) throw apiError(500, 'Failed to create project')
+    if (isMissingSchemaError(projError)) schemaError(projError)
+    if (projError || !project) throw apiError(500, projError?.message ?? 'Failed to create project')
     const projectId = project.id
 
     const [
