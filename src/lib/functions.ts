@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
+const API_TIMEOUT_MS = 15000
 
 async function apiRequest<TOut>(path: string, init: RequestInit): Promise<TOut> {
   const { data: sessionData } = await supabase.auth.getSession()
@@ -9,14 +10,33 @@ async function apiRequest<TOut>(path: string, init: RequestInit): Promise<TOut> 
   headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
-  const res = await fetch(`${API_BASE}/api/${path}`, {
-    ...init,
-    headers,
-  })
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS)
+  let res: Response
+
+  try {
+    res = await fetch(`${API_BASE}/api/${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    })
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error('The backend did not respond. Check the API server or VITE_API_URL.')
+    }
+    throw err
+  } finally {
+    window.clearTimeout(timeout)
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }))
     throw new Error(body?.message ?? body?.error ?? `Request failed: ${res.status}`)
+  }
+
+  const contentType = res.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    throw new Error('The backend returned a non-JSON response. Check that /api routes are being served.')
   }
 
   return res.json() as Promise<TOut>
