@@ -11,6 +11,7 @@ const routes: Record<string, () => Promise<{ default: Handler }>> = {
   'automations/create-project': () => import('../server/api/automations/create-project'),
   'automations/delete-account': () => import('../server/api/automations/delete-account'),
   'automations/delete-project': () => import('../server/api/automations/delete-project'),
+  'automations/ensure-user': () => import('../server/api/automations/ensure-user'),
   'automations/generate-webhook-key': () => import('../server/api/automations/generate-webhook-key'),
   'automations/skip-onboarding': () => import('../server/api/automations/skip-onboarding'),
   'billing/create-checkout': () => import('../server/api/billing/create-checkout'),

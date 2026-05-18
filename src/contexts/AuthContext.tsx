@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { ensureUser } from '@/lib/functions'
 
 const NOT_CONFIGURED = new Error(
   'Auth is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local and restart.',
@@ -85,6 +86,14 @@ function shapeUser(supaUser: SupabaseUser, profile: Record<string, unknown> | nu
   }
 }
 
+function isMissingProfileError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const maybe = error as { code?: string; details?: string | null; message?: string }
+  return maybe.code === 'PGRST116' ||
+    /0 rows/i.test(maybe.details ?? '') ||
+    /JSON object requested, multiple \(or no\) rows returned/i.test(maybe.message ?? '')
+}
+
 async function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
@@ -119,11 +128,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .from('users')
           .select('*')
           .eq('id', currentSession.user.id)
-          .single()),
+          .maybeSingle()),
         AUTH_REFRESH_TIMEOUT_MS,
       )
 
-      const nextUser = shapeUser(currentSession.user, profileResult.data)
+      let profile = profileResult.data
+      if (!profile && (profileResult.error == null || isMissingProfileError(profileResult.error))) {
+        const ensured = await ensureUser()
+        profile = ensured.profile
+      }
+
+      const nextUser = shapeUser(currentSession.user, profile as Record<string, unknown> | null)
       setUser(nextUser)
       setLoading(false)
       return nextUser
@@ -156,13 +171,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Fetch the users row so plan + onboarding changes reach the UI.
       // The bootstrapUser API route creates this row on first sign-up.
-      const { data: profile } = await supabase
+      const { data: rawProfile, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', newSession.user.id)
-        .single()
+        .maybeSingle()
 
-      setUser(shapeUser(newSession.user, profile))
+      let profile = rawProfile
+      if (!profile && (error == null || isMissingProfileError(error))) {
+        const ensured = await ensureUser()
+        profile = ensured.profile
+      }
+
+      setUser(shapeUser(newSession.user, profile as Record<string, unknown> | null))
       setLoading(false)
     })
 
@@ -178,10 +199,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .from('users')
       .select('*')
       .eq('id', session.user.id)
-      .single()
-      .then(({ data: profile }) => {
+      .maybeSingle()
+      .then(async ({ data: rawProfile, error }) => {
+        let profile = rawProfile
+        if (!profile && (error == null || isMissingProfileError(error))) {
+          const ensured = await ensureUser()
+          profile = ensured.profile
+        }
+
         if (!cancelled && session) {
-          setUser(shapeUser(session.user, profile))
+          setUser(shapeUser(session.user, profile as Record<string, unknown> | null))
           setLoading(false)
         }
       })

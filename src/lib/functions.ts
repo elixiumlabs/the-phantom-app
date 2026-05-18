@@ -3,6 +3,20 @@ import { supabase } from './supabase'
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 const API_TIMEOUT_MS = 15000
 
+function apiCandidates(path: string): string[] {
+  const bases = new Set<string>()
+
+  if (API_BASE) bases.add(API_BASE)
+  else bases.add(window.location.origin)
+
+  if (import.meta.env.DEV && !API_BASE) {
+    bases.add('http://127.0.0.1:5173')
+    bases.add('http://127.0.0.1:5174')
+  }
+
+  return [...bases].map((base) => `${base}/api/${path}`)
+}
+
 async function apiRequest<TOut>(path: string, init: RequestInit): Promise<TOut> {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
@@ -10,23 +24,34 @@ async function apiRequest<TOut>(path: string, init: RequestInit): Promise<TOut> 
   headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
-  const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS)
-  let res: Response
+  let res: Response | null = null
+  let lastError: unknown = null
 
-  try {
-    res = await fetch(`${API_BASE}/api/${path}`, {
-      ...init,
-      headers,
-      signal: controller.signal,
-    })
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
+  for (const url of apiCandidates(path)) {
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS)
+
+    try {
+      res = await fetch(url, {
+        ...init,
+        headers,
+        signal: controller.signal,
+      })
+
+      if (res.status !== 404) break
+    } catch (err) {
+      lastError = err
+      if (!(err instanceof DOMException && err.name === 'AbortError')) break
+    } finally {
+      window.clearTimeout(timeout)
+    }
+  }
+
+  if (!res) {
+    if (lastError instanceof DOMException && lastError.name === 'AbortError') {
       throw new Error('The backend did not respond. Check the API server or VITE_API_URL.')
     }
-    throw err
-  } finally {
-    window.clearTimeout(timeout)
+    throw lastError instanceof Error ? lastError : new Error('Could not reach the backend API.')
   }
 
   if (!res.ok) {
@@ -97,6 +122,9 @@ export const skipOnboarding = () =>
 
 export const adminGrantPro = (data: { uid?: string; plan?: 'phantom' | 'phantom_pro' }) =>
   call<typeof data, { ok: true; uid: string; plan: string }>('automations/admin-grant', data)
+
+export const ensureUser = () =>
+  call<Record<string, never>, { profile: Record<string, unknown> }>('automations/ensure-user', {})
 
 export const getAdminOnboardingResponses = () =>
   get<{ responses: AdminOnboardingResponse[] }>('admin/onboarding-responses')
