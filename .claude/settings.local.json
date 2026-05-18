@@ -37,7 +37,8 @@
       "mcp__9da353d0-6391-457e-b36e-8227aa98e53b__get_project_url",
       "mcp__9da353d0-6391-457e-b36e-8227aa98e53b__get_publishable_keys",
       "mcp__9da353d0-6391-457e-b36e-8227aa98e53b__apply_migration",
-      "mcp__9da353d0-6391-457e-b36e-8227aa98e53b__list_tables"
+      "mcp__9da353d0-6391-457e-b36e-8227aa98e53b__list_tables",
+      "mcp__9da353d0-6391-457e-b36e-8227aa98e53b__list_organizations"
     ]
   }
 }
