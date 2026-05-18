@@ -27,7 +27,13 @@ alter table public.ghost_identity
   add column if not exists ai_rejected_claims jsonb not null default '[]';
 
 alter table public.silent_test
-  alter column sales_page type jsonb using coalesce(nullif(sales_page, '')::jsonb, '{}'::jsonb),
+  alter column sales_page type jsonb using (
+    case
+      when sales_page is null or trim(sales_page) = '' then '{}'::jsonb
+      when sales_page ~ '^[\[{"]|^true$|^false$|^null$|^-?[0-9]' then sales_page::jsonb
+      else jsonb_build_object('url', sales_page)
+    end
+  ),
   alter column sales_page set default '{}'::jsonb,
   add column if not exists summary_responded integer not null default 0,
   add column if not exists summary_converted integer not null default 0,
