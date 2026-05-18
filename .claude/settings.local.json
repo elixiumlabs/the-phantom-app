@@ -33,7 +33,11 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\empre\\\\the-phantom-app\" -Force)",
       "Bash(Select-Object Name, PSIsContainer)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\empre\\\\the-phantom-app\\\\functions\\\\\" -Recurse -Force | Select-Object FullName, PSIsContainer | Sort-Object FullName | Format-Table -AutoSize)",
-      "Bash(grep \"\\\\.ts$\")"
+      "Bash(grep \"\\\\.ts$\")",
+      "mcp__9da353d0-6391-457e-b36e-8227aa98e53b__get_project_url",
+      "mcp__9da353d0-6391-457e-b36e-8227aa98e53b__get_publishable_keys",
+      "mcp__9da353d0-6391-457e-b36e-8227aa98e53b__apply_migration",
+      "mcp__9da353d0-6391-457e-b36e-8227aa98e53b__list_tables"
     ]
   }
 }
